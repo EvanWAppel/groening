@@ -3,8 +3,14 @@
 import math
 
 import pandas as pd
+import pytest
 
-from build_warehouse import _centroid, _epoch_to_date
+from build_warehouse import (
+    _centroid,
+    _epoch_to_date,
+    _parse_usgs_dv,
+    _webmerc_to_wgs84,
+)
 
 # ArcGIS epoch-millisecond timestamp for 1996-01-30 (matches a real permit row).
 ISSUE_MS_1996 = 822960000000
@@ -44,3 +50,29 @@ class TestEpochToDate:
         assert result == "1996-01-30"
         # Round-trips through pandas cleanly.
         assert pd.to_datetime(result).year == 1996
+
+
+class TestWebMercToWgs84:
+    def test_origin_maps_to_null_island(self):
+        lon, lat = _webmerc_to_wgs84(0.0, 0.0)
+        assert math.isclose(lon, 0.0, abs_tol=1e-9)
+        assert math.isclose(lat, 0.0, abs_tol=1e-9)
+
+    def test_portland_str_sample_reprojects_to_central_portland(self):
+        # Verbatim web_merc_x/y from a real ASTR report record.
+        lon, lat = _webmerc_to_wgs84(-13653311.461585829, 5706443.927988703)
+        assert math.isclose(lon, -122.64978, abs_tol=1e-4)
+        assert math.isclose(lat, 45.53689, abs_tol=1e-4)
+
+
+class TestParseUsgsDv:
+    def test_extracts_points_and_drops_sentinel(self, usgs_dv_payload):
+        df = _parse_usgs_dv(usgs_dv_payload)
+        # The -999999 gap row is dropped, leaving 2 real points.
+        assert list(df["date"]) == ["1972-10-01", "2026-07-01"]
+        assert list(df["discharge_cfs"]) == [16400.0, 7790.0]
+        assert list(df["provisional"]) == [False, True]
+
+    def test_raises_when_no_timeseries(self):
+        with pytest.raises(ValueError, match="no timeSeries"):
+            _parse_usgs_dv({"value": {"timeSeries": []}})

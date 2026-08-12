@@ -11,3 +11,33 @@ sources:
           Development MapServer layer 89). One row per permit since ~1995, point
           geometry reprojected to WGS84, with construction valuation, new-unit
           counts, work class/type, neighborhood, and issue dates.
+      - name: parks
+        description: >
+          PortlandMaps "Parks" boundary polygons (COP Open Data Environment
+          MapServer layer 35), ~316 parks with NAME and ACRES plus a WGS84
+          centroid computed at fetch time. No water-feature attribute exists.
+      - name: weather
+        description: >
+          NOAA GHCN-Daily for Portland International Airport (USW00024229),
+          1938-present. TMAX/TMIN in tenths °C, PRCP in tenths mm, SNOW/SNWD mm;
+          missing values are empty (NaN).
+      - name: willamette
+        description: >
+          USGS NWIS daily mean discharge (cfs) for the Willamette River at
+          Portland (site 14211720), 1972-present, with a provisional flag.
+      - name: short_term_rentals
+        description: >
+          Portland Accessory Short-Term Rental permits from the PortlandMaps
+          report API, ~2.1k records with permit type/status, issue date, address,
+          and a WGS84 point reprojected from the report's Web Mercator coords.
+      - name: crime
+        description: >
+          Portland Police Bureau reported crime (PortlandMaps ArcGIS Public/Crime
+          layers 1/40/59), rolling trailing-12-month window, WGS84 block-level
+          points with REPORTED_DATETIME, crime-against category, and offense group.
+      - name: air_quality
+        description: >
+          EPA AQS daily PM2.5 / Ozone summaries for the OR tri-county metro (state
+          41; Multnomah 051, Washington 067, Clackamas 005) from the keyless bulk
+          files, one daily observation per site. Clackamas has Ozone but no PM2.5
+          monitor. Latitude/Longitude are already WGS84.

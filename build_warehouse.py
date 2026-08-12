@@ -13,12 +13,16 @@ Usage:
     uv run python build_warehouse.py
 """
 
+import datetime
+import io
 import json
 import logging
+import math
 import socket
 import ssl
 import urllib.parse
 import urllib.request
+import zipfile
 from pathlib import Path
 
 import duckdb
@@ -240,6 +244,44 @@ def _urlopen(url: str, headers: dict | None = None, timeout: int = 300):
     )
 
 
+def _webmerc_to_wgs84(x: float, y: float) -> tuple[float, float]:
+    """EPSG:3857 (Web Mercator) meters -> (lon, lat) in WGS84 degrees.
+
+    PortlandMaps' short-term-rental report ships web_merc_x/web_merc_y rather
+    than ArcGIS geometry with an outSR option, so we reproject in the ELT.
+    """
+    lon = x / 20037508.34 * 180.0
+    lat = y / 20037508.34 * 180.0
+    lat = 180.0 / math.pi * (2.0 * math.atan(math.exp(lat * math.pi / 180.0)) - math.pi / 2.0)
+    return (lon, lat)
+
+
+def _parse_usgs_dv(payload: dict) -> pd.DataFrame:
+    """USGS NWIS daily-values JSON -> DataFrame(date, discharge_cfs, provisional).
+
+    Drops the -999999 no-data sentinel; a day is provisional if its qualifiers
+    include ``P``. Raises if the response carries no time series (bad site/param).
+    """
+    series = payload.get("value", {}).get("timeSeries", [])
+    if not series:
+        raise ValueError("USGS dv: response contained no timeSeries")
+    rows: list[dict] = []
+    for point in series[0]["values"][0]["value"]:
+        value = float(point["value"])
+        if value == -999999:
+            continue
+        rows.append(
+            {
+                "date": point["dateTime"][:10],
+                "discharge_cfs": value,
+                "provisional": "P" in point.get("qualifiers", []),
+            }
+        )
+    if not rows:
+        raise ValueError("USGS dv: every value was the no-data sentinel")
+    return pd.DataFrame(rows)
+
+
 # --------------------------------------------------------------------------- #
 # Warehouse materialization                                                    #
 # --------------------------------------------------------------------------- #
@@ -264,11 +306,157 @@ def fetch_building_permits() -> pd.DataFrame:
     return fetch_layer(cfg.PERMITS_LAYER_URL, geometry=True)
 
 
+def fetch_parks() -> pd.DataFrame:
+    """PortlandMaps park boundaries (polygons); attach a WGS84 centroid per park.
+
+    Portland publishes no park-level water-feature attribute, so — unlike Elvis —
+    there is no has_water flag; the drop is logged below.
+    """
+    log.info("Fetching parks from %s ...", cfg.PARKS_LAYER_URL)
+    log.warning("parks: Portland has no water-feature attribute — dropping has_water flag")
+    feats = fetch_features(cfg.PARKS_LAYER_URL, geometry=True, out_sr=4326)
+    rows: list[dict] = []
+    for attrs, geom in feats:
+        lon, lat = _centroid(geom)
+        row = dict(attrs)
+        row["longitude"] = lon
+        row["latitude"] = lat
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def fetch_weather() -> pd.DataFrame:
+    """NOAA GHCN-Daily for PDX. Keep the core elements; units handled in staging.
+
+    TMAX/TMIN are tenths of °C, PRCP/SNOW/SNWD are mm (PRCP tenths of mm); the
+    access-format CSV uses empty strings for missing, which pandas reads as NaN.
+    """
+    keep = {"STATION", "DATE", "PRCP", "SNOW", "SNWD", "TMAX", "TMIN"}
+    log.info("Fetching weather from %s ...", cfg.WEATHER_URL)
+    with _urlopen(cfg.WEATHER_URL, headers=cfg.USER_AGENT) as resp:
+        df = pd.read_csv(resp, usecols=lambda c: c in keep, low_memory=False)
+    log.info("  weather: %d daily rows", len(df))
+    return df
+
+
+def fetch_willamette() -> pd.DataFrame:
+    """USGS NWIS daily discharge for the downtown Willamette gauge (cfs)."""
+    end = datetime.datetime.now(tz=datetime.UTC).date().isoformat()
+    url = cfg.USGS_DV_URL.format(end=end)
+    log.info("Fetching willamette discharge from %s ...", url)
+    payload = _get_json(url)
+    df = _parse_usgs_dv(payload)
+    log.info("  willamette: %d daily discharge points", len(df))
+    return df
+
+
+def fetch_str() -> pd.DataFrame:
+    """Portland Accessory Short-Term Rental permits (paginated report CSV).
+
+    Reprojects the report's web_merc_x/web_merc_y (EPSG:3857) to WGS84 and
+    dedupes on (application_number, ivr_number).
+    """
+    frames: list[pd.DataFrame] = []
+    page = 1
+    while True:
+        url = f"{cfg.STR_REPORT_URL}&format=csv&page={page}"
+        with _urlopen(url, headers=cfg.USER_AGENT) as resp:
+            page_df = pd.read_csv(io.BytesIO(resp.read()))
+        if page_df.empty:
+            break
+        frames.append(page_df)
+        log.info("  short_term_rentals: page %d (%d rows)", page, len(page_df))
+        if len(page_df) < cfg.STR_PAGE_SIZE:
+            break
+        page += 1
+    df = pd.concat(frames, ignore_index=True)
+    # The CSV export ships UPPERCASE headers; normalize so downstream is stable.
+    df.columns = [c.lower() for c in df.columns]
+    df = df.drop_duplicates(subset=["application_number", "ivr_number"]).reset_index(drop=True)
+    lonlat = [_webmerc_to_wgs84(x, y) for x, y in zip(df["web_merc_x"], df["web_merc_y"])]
+    df["longitude"] = [p[0] for p in lonlat]
+    df["latitude"] = [p[1] for p in lonlat]
+    return df
+
+
+def fetch_crime() -> pd.DataFrame:
+    """PPB reported crime — concat the three crime-against ArcGIS point layers.
+
+    Rolling trailing-12-month window; REPORTED_DATETIME (esri date) is
+    normalized to a string by fetch_layer.
+    """
+    frames: list[pd.DataFrame] = []
+    for label, url in cfg.CRIME_LAYER_URLS.items():
+        log.info("Fetching crime layer %s ...", label)
+        frames.append(fetch_layer(url, geometry=True))
+    return pd.concat(frames, ignore_index=True)
+
+
+def fetch_air_quality() -> pd.DataFrame:
+    """EPA AQS keyless daily bulk files, filtered to the OR tri-county metro.
+
+    Downloads one national zip per (pollutant, year), keeps only the tri-county
+    rows and the sample duration that carries a daily value + AQI, and stacks
+    them. The force-IPv4 monkeypatch at module load keeps aqs.epa.gov from
+    hanging over IPv6.
+    """
+    keep_cols = [
+        "State Code", "County Code", "Site Num", "Date Local", "Arithmetic Mean",
+        "AQI", "Parameter Name", "Units of Measure", "Sample Duration",
+        "Latitude", "Longitude", "Local Site Name", "County Name",
+    ]
+    counties = set(cfg.AQS_COUNTIES)
+    frames: list[pd.DataFrame] = []
+    for param, label in cfg.AQS_PARAMS.items():
+        durations = cfg.AQS_DURATIONS[param]
+        for year in range(cfg.AQS_START_YEAR, cfg.AQS_END_YEAR + 1):
+            url = cfg.AQS_FILE_URL.format(param=param, year=year)
+            log.info("Fetching air_quality %s %d from %s ...", label, year, url)
+            with _urlopen(url, headers=cfg.USER_AGENT) as resp:
+                blob = resp.read()
+            zf = zipfile.ZipFile(io.BytesIO(blob))
+            with zf.open(zf.namelist()[0]) as member:
+                df = pd.read_csv(member, usecols=keep_cols, dtype={"State Code": str, "County Code": str, "Site Num": str})
+            df = df[(df["State Code"] == cfg.AQS_STATE) & (df["County Code"].isin(counties))]
+            df = df[df["Sample Duration"].isin(durations)]
+            if not df.empty:
+                frames.append(df)
+                log.info("  air_quality %s %d: %d tri-county rows", label, year, len(df))
+    if not frames:
+        raise ValueError("air_quality: no tri-county rows across any pollutant/year")
+    out = pd.concat(frames, ignore_index=True)
+    # Collapse duplicate (site, date, pollutant) rows to one daily observation.
+    out = (
+        out.sort_values("AQI")
+        .drop_duplicates(subset=["State Code", "County Code", "Site Num", "Date Local", "Parameter Name"], keep="last")
+        .reset_index(drop=True)
+    )
+    return out
+
+
 def main() -> None:
     con = duckdb.connect(str(DB_PATH))
     try:
         log.info("Fetching building_permits (PortlandMaps ArcGIS) ...")
         load_raw(con, "building_permits", fetch_building_permits())
+
+        log.info("Fetching parks (PortlandMaps ArcGIS) ...")
+        load_raw(con, "parks", fetch_parks())
+
+        log.info("Fetching weather (NOAA GHCN-Daily, PDX) ...")
+        load_raw(con, "weather", fetch_weather())
+
+        log.info("Fetching willamette discharge (USGS NWIS) ...")
+        load_raw(con, "willamette", fetch_willamette())
+
+        log.info("Fetching short_term_rentals (PortlandMaps report) ...")
+        load_raw(con, "short_term_rentals", fetch_str())
+
+        log.info("Fetching crime (PortlandMaps ArcGIS) ...")
+        load_raw(con, "crime", fetch_crime())
+
+        log.info("Fetching air_quality (EPA AQS bulk, tri-county) ...")
+        load_raw(con, "air_quality", fetch_air_quality())
     finally:
         con.close()
     log.info("Warehouse build complete: %s", DB_PATH)

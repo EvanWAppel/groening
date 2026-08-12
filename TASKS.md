@@ -127,26 +127,32 @@ Start only after the interview outcomes (drop list, metro breadth, water body) a
 recorded above and each source is verified. For each: fetch → `stg_` view →
 `mart_` table → `views/*.py` page. Drop and **log** any topic without a source.
 
-- [ ] **TOPIC-permits** — Building Permits (PortlandMaps). *(likely the VS topic)*
-- [ ] **TOPIC-parks** — Parks (PortlandMaps) + water-feature flags.
-- [ ] **TOPIC-air** — Air Quality (EPA AQS bulk, OR FIPS).
-- [ ] **TOPIC-weather** — Weather extremes (NOAA GHCN-Daily, PDX). Rename page.
-- [ ] **TOPIC-crime** — Police / crime calls (PPB). Adapt `fetch_crime()` to PPB
-  format + years.
-- [ ] **TOPIC-str** — Short-Term Rental permits (City of Portland).
-- [ ] **TOPIC-licenses** — Business licenses/registrations (City of Portland).
+- [x] **TOPIC-permits** — Building Permits (PortlandMaps MapServer/89). *(VS topic)*
+      36,263 geocoded permits; hexbin map + valuation/work-class charts.
+- [x] **TOPIC-parks** — Parks (PortlandMaps Environment/35), 316 polygons →
+      centroids. No water-feature attribute in Portland → flag dropped + logged.
+- [x] **TOPIC-air** — Air Quality (EPA AQS bulk, OR FIPS 41 / tri-county), 2019–2024,
+      PM2.5 + Ozone. Sample-Duration filtered; Clackamas Ozone-only (noted). 2020
+      wildfire-smoke spike visible.
+- [x] **TOPIC-weather** — Rain & Records (NOAA GHCN-Daily PDX), 1938–present. °F/in.
+- [x] **TOPIC-crime** — Reported Crime (PortlandMaps ArcGIS Public/Crime 1/40/59),
+      rolling 12mo, 51,254 offenses. Hour×weekday heatmap + hexbin map.
+- [x] **TOPIC-str** — Short-Term Rentals (PortlandMaps report API), 2,107 permits.
+      Web-Mercator → WGS84 reproject (TDD'd).
+- [ ] **TOPIC-licenses** — Business licenses/registrations (City of Portland). *(next)*
 - [ ] **TOPIC-restaurants** — Restaurant inspections (Multnomah County EH) — *only
   if a machine-readable feed exists; else drop + log.*
-- [ ] **TOPIC-water** — Signature water body time series (USGS NWIS or USACE).
+- [x] **TOPIC-water** — Willamette River (USGS NWIS site 14211720, discharge 00060),
+      1972–present. Gage height had no daily series → used discharge.
 - [ ] **TOPIC-tourism** — Tourism / Air Travel (Port of Portland PDX passengers +
   Travel Portland). **No gaming.**
 - [ ] **TOPIC-art** — Public Art (PortlandMaps) — *optional; verify.*
 - [ ] **TOPIC-fire** — Fire Inspections (Portland Fire & Rescue) — *candidate to
-  drop; verify.*
-- [ ] **TOPIC-marriage** — Marriage Licenses (Multnomah County) — *high risk;
-  candidate to drop + log.*
-- [ ] **TOPIC-extras** — Any Portland-specific extras chosen in the interview (311,
-  tree canopy, transit counts, UGB…).
+  drop; verify (interview: drop if no easy feed).*
+- [ ] **TOPIC-marriage** — Marriage Licenses (Multnomah County) — *candidate to
+  drop + log (interview: drop if no easy feed).*
+- [ ] **TOPIC-extras** — Portland extras chosen in interview: 311, tree canopy,
+      bike/transit counts, Urban Growth Boundary. *(verify feeds, then wire)*
 - [ ] **TOPIC-overview** — Overview page LAST: headline metrics from the marts that
   actually exist.
 

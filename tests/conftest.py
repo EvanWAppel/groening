@@ -16,3 +16,25 @@ def polygon_geom() -> dict:
     The unit square (0,0)-(2,0)-(2,2)-(0,2) has centroid (1, 1).
     """
     return {"rings": [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]]}
+
+
+@pytest.fixture
+def usgs_dv_payload() -> dict:
+    """A minimal USGS NWIS daily-values JSON envelope with one gap sentinel."""
+    return {
+        "value": {
+            "timeSeries": [
+                {
+                    "values": [
+                        {
+                            "value": [
+                                {"dateTime": "1972-10-01T00:00:00.000", "value": "16400", "qualifiers": ["A"]},
+                                {"dateTime": "2026-07-01T00:00:00.000", "value": "7790", "qualifiers": ["P"]},
+                                {"dateTime": "2026-07-02T00:00:00.000", "value": "-999999", "qualifiers": ["P"]},
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
