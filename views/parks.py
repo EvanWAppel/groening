@@ -61,7 +61,7 @@ st.subheader("Where the parks are")
 st.caption("Each dot is a park centroid; larger dots are larger parks.")
 points = query(
     """
-    select name, acres, longitude, latitude
+    select name, acres, sqrt(acres) * 40 + 60 as dot_radius, longitude, latitude
     from main.mart_parks
     where has_valid_point
     """
@@ -70,7 +70,9 @@ layer = pdk.Layer(
     "ScatterplotLayer",
     data=points,
     get_position="[longitude, latitude]",
-    get_radius="sqrt(acres) * 40 + 60",
+    # deck.gl's JSON expression parser forbids function calls (e.g. sqrt), so the
+    # radius is precomputed in SQL and referenced as a plain column here.
+    get_radius="dot_radius",
     get_fill_color=[46, 139, 87, 160],
     pickable=True,
 )

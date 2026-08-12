@@ -74,14 +74,15 @@ st.altair_chart(bad_chart, width="stretch")
 # --- Monitor map ---
 st.subheader("Monitoring sites")
 sites = query(
-    "select site_name, county, pollutant, avg_aqi, longitude, latitude "
-    "from main.mart_air_quality_by_site"
+    "select site_name, county, pollutant, avg_aqi, avg_aqi * 30 + 150 as dot_radius, "
+    "longitude, latitude from main.mart_air_quality_by_site"
 )
 layer = pdk.Layer(
     "ScatterplotLayer",
     data=sites,
     get_position="[longitude, latitude]",
-    get_radius="avg_aqi * 30 + 150",
+    # Radius precomputed in SQL (deck.gl JSON expressions can't call functions).
+    get_radius="dot_radius",
     get_fill_color=[193, 18, 31, 150],
     pickable=True,
 )
