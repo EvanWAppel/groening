@@ -15,6 +15,7 @@ COPY . .
 # the dbt marts). The DB stays out of git and is rebuilt fresh on every deploy.
 RUN python build_warehouse.py && dbt build --profiles-dir .
 
-# Railway injects $PORT at runtime; default to 8501 for local runs.
+# Railway injects $PORT at runtime; default to 8501 for local runs. Exec form
+# (via sh -c so $PORT still expands) so Streamlit receives SIGTERM directly.
 EXPOSE 8501
-CMD streamlit run streamlit_app.py --server.port ${PORT:-8501} --server.address 0.0.0.0
+CMD ["sh", "-c", "streamlit run streamlit_app.py --server.port ${PORT:-8501} --server.address 0.0.0.0"]
