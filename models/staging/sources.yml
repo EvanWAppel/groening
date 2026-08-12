@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw
+    database: portland
+    schema: raw
+    tables:
+      - name: building_permits
+        description: >
+          PortlandMaps "Residential Building Permits" (COP Open Data Planning &
+          Development MapServer layer 89). One row per permit since ~1995, point
+          geometry reprojected to WGS84, with construction valuation, new-unit
+          counts, work class/type, neighborhood, and issue dates.

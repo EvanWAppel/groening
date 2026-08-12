@@ -1,0 +1,28 @@
+[project]
+name = "groening"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "altair>=6.2.2",
+    "dbt-duckdb>=1.11.0",
+    "duckdb>=1.5.5",
+    "openpyxl>=3.1.5",
+    "pandas>=3.0.5",
+    "pydeck>=0.9.3",
+    "streamlit>=1.61.1",
+]
+
+[dependency-groups]
+dev = [
+    "prek>=0.4.13",
+    "pytest>=9.1.1",
+    "ruff>=0.16.2",
+    "ty>=0.0.70",
+]
+
+[tool.pytest.ini_options]
+# Tests import top-level modules (build_warehouse, city_config) by name.
+pythonpath = ["."]
+

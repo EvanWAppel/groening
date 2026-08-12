@@ -1,0 +1,10 @@
+# Project-local dbt profile. Run dbt with `--profiles-dir .`
+# DuckDB warehouse is a single file (portland.duckdb) built by build_warehouse.py.
+groening:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: 'portland.duckdb'
+      schema: main
+      threads: 4
