@@ -41,3 +41,23 @@ sources:
           41; Multnomah 051, Washington 067, Clackamas 005) from the keyless bulk
           files, one daily observation per site. Clackamas has Ozone but no PM2.5
           monitor. Latitude/Longitude are already WGS84.
+      - name: trees
+        description: >
+          PortlandMaps Parks Tree Inventory (~25.7k points): taxonomy, DBH/height/
+          condition, and ecosystem-benefit metrics (carbon, stormwater). WGS84.
+      - name: bike_network
+        description: >
+          PBOT Bicycle Network segment attributes (~40k): SegmentName, Status,
+          Facility type, YearBuilt/YearRetired, LengthMiles. No geometry fetched.
+      - name: ugb
+        description: >
+          Metro Urban Growth Boundary — one row: AREA_ (sq ft) and the outer
+          boundary ring as a JSON coordinate array (WGS84).
+      - name: marriage
+        description: >
+          Oregon OHA marriages for Multnomah County, aggregate yearly Total and
+          Same-sex counts, 1995-present (2025/2026 preliminary).
+      - name: tourism
+        description: >
+          BTS international passenger volumes for PDX, monthly 1990-2025
+          (year, month, sum_total).

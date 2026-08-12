@@ -52,6 +52,17 @@ socket.getaddrinfo = _ipv4_first  # ty: ignore[invalid-assignment]
 DB_PATH = Path(__file__).parent / "portland.duckdb"
 PAGE_SIZE = cfg.PAGE_SIZE
 
+# Topics from the Elvis blueprint that Portland does not publish as a clean,
+# machine-readable open feed (verified 2026-08-11). Surfaced at build time.
+DROPPED_TOPICS = {
+    "fire_inspections": "Portland Fire & Rescue publishes only station/district "
+    "polygons — no inspection or incident records feed.",
+    "business_licenses": "Portland's business license is a Revenue tax, not an open "
+    "registry; the legacy CivicApps dataset is decommissioned.",
+    "public_art": "Only a 42-point unofficial downtown scrape (~2012) exists; RACC "
+    "publishes no machine-readable geo feed of its full collection.",
+}
+
 
 # --------------------------------------------------------------------------- #
 # Generic ArcGIS fetch (FeatureServer or MapServer, any org, optional TLS skip) #
@@ -434,6 +445,86 @@ def fetch_air_quality() -> pd.DataFrame:
     return out
 
 
+def fetch_trees() -> pd.DataFrame:
+    """PortlandMaps Parks Tree Inventory points (taxonomy + ecosystem benefits)."""
+    log.info("Fetching trees from %s ...", cfg.TREES_LAYER_URL)
+    return fetch_layer(cfg.TREES_LAYER_URL, geometry=True)
+
+
+def fetch_bike_network() -> pd.DataFrame:
+    """PBOT bicycle network segment attributes (YearBuilt drives the trend)."""
+    log.info("Fetching bike_network from %s ...", cfg.BIKE_NETWORK_URL)
+    return fetch_layer(cfg.BIKE_NETWORK_URL, geometry=False)
+
+
+def fetch_ugb() -> pd.DataFrame:
+    """Metro Urban Growth Boundary — one polygon; keep area + the outer ring."""
+    log.info("Fetching ugb from %s ...", cfg.UGB_URL)
+    feats = fetch_features(cfg.UGB_URL, out_sr=4326)
+    if not feats:
+        raise ValueError("ugb: no feature returned")
+    attrs, geom = feats[0]
+    rings = (geom or {}).get("rings", [])
+    outer = max(rings, key=len) if rings else []
+    return pd.DataFrame(
+        [{"area_sqft": attrs.get("AREA_"), "boundary_json": json.dumps(outer)}]
+    )
+
+
+def _marriage_col(sdf: pd.DataFrame, name: str):
+    """Case-insensitive column lookup for the OHA marriage sheets."""
+    for col in sdf.columns:
+        if str(col).strip().lower() == name.lower():
+            return col
+    return None
+
+
+def fetch_marriage() -> pd.DataFrame:
+    """Oregon OHA marriages by county (aggregate counts) — one sheet per year.
+
+    Extracts the configured county's yearly Total and Same-sex counts. Sheets
+    named e.g. "2025p" are preliminary.
+    """
+    log.info("Fetching marriage from %s ...", cfg.MARRIAGE_XLSX_URL)
+    # Row 0 of each sheet is a title ("Marriages by month and county..."); the
+    # real header (County, Total, Same sex, Jan..Dec) is on row 1.
+    with _urlopen(cfg.MARRIAGE_XLSX_URL, headers=cfg.USER_AGENT) as resp:
+        sheets = pd.read_excel(io.BytesIO(resp.read()), sheet_name=None, header=1)
+    rows: list[dict] = []
+    for sheet_name, sdf in sheets.items():
+        stem = str(sheet_name).strip().rstrip("pP").strip()
+        if not stem.isdigit():
+            continue
+        year = int(stem)
+        county_col = sdf.columns[0]
+        mask = sdf[county_col].astype(str).str.strip().str.casefold() == cfg.MARRIAGE_COUNTY.casefold()
+        match = sdf[mask]
+        if match.empty:
+            continue
+        total_col = _marriage_col(sdf, "Total")
+        same_col = _marriage_col(sdf, "Same sex")
+        rows.append(
+            {
+                "year": year,
+                "total": match.iloc[0][total_col] if total_col else None,
+                "same_sex": match.iloc[0][same_col] if same_col else None,
+                "preliminary": str(sheet_name).strip().lower().endswith("p"),
+            }
+        )
+    if not rows:
+        raise ValueError(f"marriage: county {cfg.MARRIAGE_COUNTY} not found in any sheet")
+    return pd.DataFrame(rows)
+
+
+def fetch_tourism() -> pd.DataFrame:
+    """BTS international passenger volumes for PDX (monthly, keyless Socrata)."""
+    log.info("Fetching tourism from %s ...", cfg.BTS_PDX_INTL_URL)
+    with _urlopen(cfg.BTS_PDX_INTL_URL, headers=cfg.USER_AGENT) as resp:
+        df = pd.read_csv(io.BytesIO(resp.read()))
+    log.info("  tourism: %d monthly rows", len(df))
+    return df
+
+
 def main() -> None:
     con = duckdb.connect(str(DB_PATH))
     try:
@@ -457,8 +548,29 @@ def main() -> None:
 
         log.info("Fetching air_quality (EPA AQS bulk, tri-county) ...")
         load_raw(con, "air_quality", fetch_air_quality())
+
+        log.info("Fetching trees (PortlandMaps ArcGIS) ...")
+        load_raw(con, "trees", fetch_trees())
+
+        log.info("Fetching bike_network (PortlandMaps ArcGIS) ...")
+        load_raw(con, "bike_network", fetch_bike_network())
+
+        log.info("Fetching ugb (Metro ArcGIS) ...")
+        load_raw(con, "ugb", fetch_ugb())
+
+        log.info("Fetching marriage (Oregon OHA vital stats) ...")
+        load_raw(con, "marriage", fetch_marriage())
+
+        log.info("Fetching tourism / air travel (BTS Socrata) ...")
+        load_raw(con, "tourism", fetch_tourism())
     finally:
         con.close()
+
+    # Topics dropped for lack of a clean, machine-readable Portland feed (verified
+    # 2026-08-11). Logged per data discipline so a missing page never reads as done.
+    for topic, reason in DROPPED_TOPICS.items():
+        log.warning("DROPPED topic %s: %s", topic, reason)
+
     log.info("Warehouse build complete: %s", DB_PATH)
 
 

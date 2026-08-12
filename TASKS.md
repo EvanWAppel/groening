@@ -139,22 +139,30 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
       rolling 12mo, 51,254 offenses. Hour×weekday heatmap + hexbin map.
 - [x] **TOPIC-str** — Short-Term Rentals (PortlandMaps report API), 2,107 permits.
       Web-Mercator → WGS84 reproject (TDD'd).
-- [ ] **TOPIC-licenses** — Business licenses/registrations (City of Portland). *(next)*
-- [ ] **TOPIC-restaurants** — Restaurant inspections (Multnomah County EH) — *only
-  if a machine-readable feed exists; else drop + log.*
 - [x] **TOPIC-water** — Willamette River (USGS NWIS site 14211720, discharge 00060),
       1972–present. Gage height had no daily series → used discharge.
-- [ ] **TOPIC-tourism** — Tourism / Air Travel (Port of Portland PDX passengers +
-  Travel Portland). **No gaming.**
-- [ ] **TOPIC-art** — Public Art (PortlandMaps) — *optional; verify.*
-- [ ] **TOPIC-fire** — Fire Inspections (Portland Fire & Rescue) — *candidate to
-  drop; verify (interview: drop if no easy feed).*
-- [ ] **TOPIC-marriage** — Marriage Licenses (Multnomah County) — *candidate to
-  drop + log (interview: drop if no easy feed).*
-- [ ] **TOPIC-extras** — Portland extras chosen in interview: 311, tree canopy,
-      bike/transit counts, Urban Growth Boundary. *(verify feeds, then wire)*
+- [x] **TOPIC-tourism** — Air Travel: BTS international passengers at PDX, monthly
+      1990–2025 (Socrata). No gaming. 2020 COVID collapse visible.
+- [x] **TOPIC-trees** *(extra)* — Parks Tree Inventory (25,734 pts): species +
+      carbon/stormwater benefits. Hexbin map.
+- [x] **TOPIC-bike** *(extra)* — PBOT Bicycle Network: miles-built-per-year +
+      cumulative growth (segments with a recorded YearBuilt).
+- [x] **TOPIC-ugb** *(extra)* — Metro Urban Growth Boundary (~408 sq mi); boundary
+      PathLayer map. Single current polygon, no amendment history (logged).
+- [x] **TOPIC-marriage** — KEPT (feed exists): Oregon OHA Multnomah aggregate
+      county×year counts w/ same-sex breakout, 1995–present.
+- [ ] **TOPIC-restaurants** — VERIFIED live (Multnomah MyHealthDepartment JSON POST
+      API; score+name+address, no coords). *Next batch — charts+table page.*
+- [~] **TOPIC-licenses** — DROPPED + logged. Portland's is a Revenue tax, not an
+      open registry; legacy CivicApps dataset decommissioned.
+- [~] **TOPIC-art** — DROPPED + logged. Only a 42-pt unofficial ~2012 downtown
+      scrape; RACC publishes no machine-readable geo feed.
+- [~] **TOPIC-fire** — DROPPED + logged. Only station/district polygons; no
+      inspection or incident feed (matches interview drop-if-no-feed).
+- [~] **TOPIC-311** *(extra)* — HELD for Evan. No generic 311 feed; only row-level
+      option is illegal-campsite (homelessness) complaints — sensitive; ask first.
 - [ ] **TOPIC-overview** — Overview page LAST: headline metrics from the marts that
-  actually exist.
+  actually exist. *(after restaurants)*
 
 ---
 

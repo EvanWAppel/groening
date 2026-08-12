@@ -24,6 +24,11 @@ pages = [
     st.Page("views/willamette.py", title="Willamette River", icon="🌊"),
     st.Page("views/weather.py", title="Rain & Records", icon="🌧️"),
     st.Page("views/air_quality.py", title="Air Quality", icon="💨"),
+    st.Page("views/trees.py", title="Trees", icon="🌲"),
+    st.Page("views/bike.py", title="Bike Network", icon="🚲"),
+    st.Page("views/tourism.py", title="Air Travel", icon="✈️"),
+    st.Page("views/marriage.py", title="Marriages", icon="💍"),
+    st.Page("views/ugb.py", title="Urban Growth Boundary", icon="🗺️"),
 ]
 
 st.navigation(pages).run()

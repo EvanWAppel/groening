@@ -29,6 +29,9 @@ COP_PLANNING = f"{PORTLANDMAPS_OD}/COP_OpenData_PlanningDevelopment/MapServer"
 # Environment open-data service (parks, wetlands, streams, watersheds, etc.).
 COP_ENVIRONMENT = f"{PORTLANDMAPS_OD}/COP_OpenData_Environment/MapServer"
 
+# Transportation open-data service (bike network, streets, etc.).
+COP_TRANSPORTATION = f"{PORTLANDMAPS_OD}/COP_OpenData_Transportation/MapServer"
+
 # --------------------------------------------------------------------------- #
 # Building Permits (vertical-slice topic) — VERIFIED live 2026-08-11           #
 # --------------------------------------------------------------------------- #
@@ -45,6 +48,11 @@ PERMITS_LAYER_URL = f"{COP_PLANNING}/89"
 # Portland publishes no park-level water-feature attribute — that Elvis flag is
 # dropped (and logged). A wetlands/stream spatial intersect could revive it later.
 PARKS_LAYER_URL = f"{COP_ENVIRONMENT}/35"
+
+# Layer 220 = "Parks Tree Inventory", 25,734 points with taxonomy (Common_name,
+# Genus, Genus_species), size (DBH, TreeHeight, Condition), and ecosystem-benefit
+# metrics (carbon storage/sequestration, stormwater, pollution removal). WGS84.
+TREES_LAYER_URL = f"{COP_ENVIRONMENT}/220"
 
 # --------------------------------------------------------------------------- #
 # EPA AQS — keyless bulk daily files, filtered by state/county FIPS            #
@@ -110,6 +118,48 @@ CRIME_LAYER_URLS = {
 # Coordinates are web_merc_x/web_merc_y in EPSG:3857 — reproject to WGS84 in ELT.
 STR_REPORT_URL = "https://www.portlandmaps.com/reports/index.cfm?action=short-term-rental"
 STR_PAGE_SIZE = 100
+
+# --------------------------------------------------------------------------- #
+# Bike network — PortlandMaps Transportation MapServer — VERIFIED 2026-08-11   #
+# --------------------------------------------------------------------------- #
+# Layer 75 = "Bicycle Network" polylines, ~40k segments. YearBuilt drives a
+# "miles built per year" + cumulative-network-growth story. Attributes only
+# (no geometry) are needed for the charts. Facility = facility-type code.
+BIKE_NETWORK_URL = f"{COP_TRANSPORTATION}/75"
+
+# --------------------------------------------------------------------------- #
+# Urban Growth Boundary — Metro DRC (ArcGIS Online) — VERIFIED 2026-08-11      #
+# --------------------------------------------------------------------------- #
+# Single dissolved polygon (~408 sq mi), no amendment history. Native SR is
+# Oregon StatePlane (wkid 2913, feet) — pass outSR=4326. AREA_ is square feet.
+UGB_URL = (
+    "https://services1.arcgis.com/d9Fl2w84c4Vbf9kI/arcgis/rest/services/"
+    "Urban_Growth_Boundary/FeatureServer/0"
+)
+
+# --------------------------------------------------------------------------- #
+# Marriage — Oregon Health Authority vital stats (aggregate) — VERIFIED        #
+# --------------------------------------------------------------------------- #
+# No record-level feed (privacy). OHA publishes county x month marriage COUNTS
+# with a same-sex breakout, 1995-present, one sheet per year, in a single XLSX.
+MARRIAGE_XLSX_URL = (
+    "https://www.oregon.gov/oha/PH/BIRTHDEATHCERTIFICATES/"
+    "AllStatisticsMarriageData/MarriagesCountyByMonth1995-now.xlsx"
+)
+MARRIAGE_COUNTY = "Multnomah"
+
+# --------------------------------------------------------------------------- #
+# Air travel — BTS international passenger API (Socrata) — VERIFIED 2026-08-11  #
+# --------------------------------------------------------------------------- #
+# No gaming analog for Portland (Elvis's tourism page was gaming-heavy), so this
+# is reframed as air travel. BTS International_Report_Passengers (dataset
+# xgub-n9bw), monthly 1990-2025, keyless. International only; PDX is usg_apt.
+# Server-side aggregate: one row per (year, month) with summed passengers.
+BTS_PDX_INTL_URL = (
+    "https://data.transportation.gov/resource/xgub-n9bw.csv"
+    "?usg_apt=PDX&$select=year,month,sum(total)&$group=year,month"
+    "&$order=year,month&$limit=50000"
+)
 
 # --------------------------------------------------------------------------- #
 # Shared fetch tuning                                                          #
