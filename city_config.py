@@ -162,6 +162,40 @@ BTS_PDX_INTL_URL = (
 )
 
 # --------------------------------------------------------------------------- #
+# Restaurant inspections — Multnomah County (MyHealthDepartment) — VERIFIED    #
+# --------------------------------------------------------------------------- #
+# Multnomah County Environmental Health publishes food/pool/lodging inspections
+# on the MyHealthDepartment platform. The browse list POSTs a `searchInspections`
+# task to the SITE ROOT (not an ArcGIS/REST path); it returns JSON rows with the
+# establishment name, address, sanitation score (0-100 for food), inspection
+# type, purpose, and date — but NO coordinates (address only, so no map).
+# Gotchas (verified 2026-08-12):
+#   - The host 403s clients without a browser-ish User-Agent; USER_AGENT below
+#     already passes, so no per-host TLS/UA special-casing is required.
+#   - A single query is hard-capped at ~225 rows (resultOffset >= 225 => "bad
+#     request") and pages 25 at a time, so build_warehouse tiles the rolling
+#     window into date ranges and splits any that overflow the cap.
+#   - The searchable database only retains ~1 year of inspections.
+INSPECTIONS_URL = "https://inspections.myhealthdepartment.com/"
+INSPECTIONS_PATH = "multco-eh"  # Multnomah County Environmental Health jurisdiction
+INSPECTIONS_MONTHS = 6  # rolling history to pull (bounded by ~225-row/query cap)
+# Base date-window size. All-facility volume is ~20-80/day, so a 3-day window
+# stays well under the 225-row cap and rarely needs splitting — fewer total
+# requests (and no wasted re-fetch) than a wide window that keeps overflowing.
+INSPECTIONS_WINDOW_DAYS = 3
+INSPECTIONS_PAGE_SIZE = 25  # server caps a page at 25 regardless of requested count
+INSPECTIONS_CAP = 225  # server refuses resultOffset >= this within one window
+# Date windows are independent, so fetch them concurrently — the pull is entirely
+# I/O-bound on a ~2s/request server. Tuned to 3: the county endpoint throttles
+# (403s + connection timeouts) at 6-way load but tolerates 3 cleanly, roughly
+# halving wall-clock (~22min -> ~11min) without triggering anti-abuse limits.
+INSPECTIONS_CONCURRENCY = 3
+# Hundreds of requests over a rate-limited county endpoint => a transient
+# timeout/reset is likely at least once; retry with exponential backoff before
+# aborting the whole build.
+INSPECTIONS_RETRIES = 4
+
+# --------------------------------------------------------------------------- #
 # Shared fetch tuning                                                          #
 # --------------------------------------------------------------------------- #
 PAGE_SIZE = 2000

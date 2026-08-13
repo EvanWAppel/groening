@@ -13,6 +13,8 @@ Usage:
     uv run python build_warehouse.py
 """
 
+import calendar
+import concurrent.futures
 import datetime
 import io
 import json
@@ -20,6 +22,8 @@ import logging
 import math
 import socket
 import ssl
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
@@ -294,6 +298,111 @@ def _parse_usgs_dv(payload: dict) -> pd.DataFrame:
 
 
 # --------------------------------------------------------------------------- #
+# Restaurant inspections — MyHealthDepartment searchInspections JSON API       #
+#                                                                              #
+# The portal's browse list POSTs a `searchInspections` task to the site root.  #
+# It date-filters, pages 25 rows at a time, and refuses resultOffset >= ~225   #
+# (one query window). To pull a rolling multi-month history we tile the window #
+# into date ranges and recursively split any range that overflows the cap, so  #
+# a busy week never silently drops rows. (The score/name/address parsing is    #
+# left to the dbt staging model, matching the other topics.)                   #
+# --------------------------------------------------------------------------- #
+def _months_ago(d: datetime.date, months: int) -> datetime.date:
+    """`d` shifted back `months` calendar months, clamped to the month's length."""
+    m = d.month - 1 - months
+    year = d.year + m // 12
+    month = m % 12 + 1
+    day = min(d.day, calendar.monthrange(year, month)[1])
+    return datetime.date(year, month, day)
+
+
+def _inspection_windows(
+    end: datetime.date, months: int, window_days: int
+) -> list[tuple[str, str]]:
+    """Contiguous, non-overlapping [start, end] ISO date ranges tiling the rolling
+    ``months``-month period ending at ``end``, each spanning up to ``window_days``.
+    """
+    windows: list[tuple[str, str]] = []
+    cur = _months_ago(end, months)
+    step = datetime.timedelta(days=window_days - 1)
+    one = datetime.timedelta(days=1)
+    while cur <= end:
+        w_end = min(cur + step, end)
+        windows.append((cur.isoformat(), w_end.isoformat()))
+        cur = w_end + one
+    return windows
+
+
+def _split_window(ws: str, we: str) -> tuple[tuple[str, str], tuple[str, str]]:
+    """Split an inclusive date range in half into two contiguous sub-ranges."""
+    s = datetime.date.fromisoformat(ws)
+    e = datetime.date.fromisoformat(we)
+    mid = s + (e - s) // 2
+    return (ws, mid.isoformat()), ((mid + datetime.timedelta(days=1)).isoformat(), we)
+
+
+def _search_body(path: str, drange: str, start: int, count: int) -> dict:
+    """The JSON body for one ``searchInspections`` page (empty search = browse)."""
+    return {
+        "data": {
+            "path": path,
+            "programName": "",
+            "filters": {"date": drange},
+            "start": start,
+            "count": count,
+            "searchQueryOverride": None,
+            "searchStr": "",
+            "lat": 0,
+            "lng": 0,
+            "sort": {},
+        },
+        "task": "searchInspections",
+    }
+
+
+def _paginate(post, path: str, drange: str) -> tuple[list[dict], bool]:
+    """Page one date window via ``post(body) -> json``.
+
+    Returns ``(rows, truncated)``. Stops cleanly on a short/empty page or a
+    server error object; ``truncated`` is True when full pages run all the way
+    to the ~225-row cap, meaning the window holds more rows than the API serves.
+    """
+    rows: list[dict] = []
+    seen: set = set()
+    start = 0
+    while start < cfg.INSPECTIONS_CAP:
+        data = post(_search_body(path, drange, start, cfg.INSPECTIONS_PAGE_SIZE))
+        if not isinstance(data, list) or not data:
+            return rows, False
+        for r in data:
+            rid = r.get("inspectionID")
+            if rid and rid not in seen:
+                seen.add(rid)
+                rows.append(r)
+        if len(data) < cfg.INSPECTIONS_PAGE_SIZE:
+            return rows, False
+        start += cfg.INSPECTIONS_PAGE_SIZE
+    return rows, True
+
+
+def _collect_window(post, path: str, ws: str, we: str) -> list[dict]:
+    """All inspection rows in [ws, we], recursively splitting on cap overflow."""
+    rows, truncated = _paginate(post, path, f"{ws} to {we}")
+    if not truncated:
+        return rows
+    if ws == we:
+        log.warning(
+            "inspections: single day %s exceeds the %d-row cap; keeping %d rows",
+            ws,
+            cfg.INSPECTIONS_CAP,
+            len(rows),
+        )
+        return rows
+    left, right = _split_window(ws, we)
+    return _collect_window(post, path, *left) + _collect_window(post, path, *right)
+
+
+# --------------------------------------------------------------------------- #
 # Warehouse materialization                                                    #
 # --------------------------------------------------------------------------- #
 def load_raw(con: duckdb.DuckDBPyConnection, table: str, df: pd.DataFrame) -> None:
@@ -525,6 +634,96 @@ def fetch_tourism() -> pd.DataFrame:
     return df
 
 
+def _post_inspections(body: dict) -> object:
+    """POST a searchInspections body and return the parsed JSON, with retry.
+
+    The host 403s clients without a browser-ish User-Agent; ``cfg.USER_AGENT``
+    already satisfies it (verified), so no cert/UA special-casing is needed.
+
+    A full pull is hundreds of requests over a modestly rate-limited county
+    endpoint, so a transient connection timeout/reset is likely at least once.
+    Rather than let one blip abort the whole warehouse build, retry a few times
+    with exponential backoff — and only then re-raise (errors are surfaced, not
+    swallowed).
+    """
+    payload = json.dumps(body).encode()
+    last_err: Exception | None = None
+    for attempt in range(cfg.INSPECTIONS_RETRIES):
+        req = urllib.request.Request(
+            cfg.INSPECTIONS_URL,
+            data=payload,
+            headers={**cfg.USER_AGENT, "Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                return json.load(resp)
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as err:
+            last_err = err
+            log.warning(
+                "inspections POST failed (attempt %d/%d): %s",
+                attempt + 1,
+                cfg.INSPECTIONS_RETRIES,
+                err,
+            )
+            time.sleep(2**attempt)
+    raise RuntimeError(
+        f"inspections POST failed after {cfg.INSPECTIONS_RETRIES} attempts"
+    ) from last_err
+
+
+def fetch_inspections() -> pd.DataFrame:
+    """Multnomah County food-facility inspections (rolling window, all types).
+
+    Tiles the rolling window into date ranges (splitting any that overflow the
+    ~225-row cap) and dedupes by inspectionID. Pools/spas come back too; the
+    staging model filters to the Food program (restaurants, carts, warehouses).
+    """
+    end = datetime.datetime.now(tz=datetime.UTC).date()
+    windows = _inspection_windows(end, cfg.INSPECTIONS_MONTHS, cfg.INSPECTIONS_WINDOW_DAYS)
+    log.info(
+        "Fetching restaurant_inspections: %d date windows over %d months "
+        "(%d-way concurrent) from %s ...",
+        len(windows),
+        cfg.INSPECTIONS_MONTHS,
+        cfg.INSPECTIONS_CONCURRENCY,
+        cfg.INSPECTIONS_URL,
+    )
+    # Windows are independent; fan them out over a small thread pool. Each future
+    # returns that window's rows (with its own recursive cap-splitting); we dedupe
+    # by inspectionID once they're all in. Any window error re-raises here.
+    collected: list[list[dict]] = []
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=cfg.INSPECTIONS_CONCURRENCY
+    ) as pool:
+        futures = {
+            pool.submit(_collect_window, _post_inspections, cfg.INSPECTIONS_PATH, ws, we): (ws, we)
+            for ws, we in windows
+        }
+        for done, fut in enumerate(concurrent.futures.as_completed(futures), 1):
+            ws, we = futures[fut]
+            window_rows = fut.result()
+            collected.append(window_rows)
+            log.info(
+                "  restaurant_inspections window %d/%d (%s..%s): %d rows",
+                done,
+                len(windows),
+                ws,
+                we,
+                len(window_rows),
+            )
+    seen: set = set()
+    rows: list[dict] = []
+    for window_rows in collected:
+        for r in window_rows:
+            rid = r.get("inspectionID")
+            if rid and rid not in seen:
+                seen.add(rid)
+                rows.append(r)
+    log.info("  restaurant_inspections: %d distinct inspections", len(rows))
+    return pd.DataFrame(rows)
+
+
 def main() -> None:
     con = duckdb.connect(str(DB_PATH))
     try:
@@ -563,6 +762,9 @@ def main() -> None:
 
         log.info("Fetching tourism / air travel (BTS Socrata) ...")
         load_raw(con, "tourism", fetch_tourism())
+
+        log.info("Fetching restaurant_inspections (Multnomah MyHealthDepartment) ...")
+        load_raw(con, "restaurant_inspections", fetch_inspections())
     finally:
         con.close()
 

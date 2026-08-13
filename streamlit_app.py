@@ -21,6 +21,7 @@ pages = [
     st.Page("views/parks.py", title="Parks", icon="🌳"),
     st.Page("views/crime.py", title="Reported Crime", icon="🚨"),
     st.Page("views/short_term_rentals.py", title="Short-Term Rentals", icon="🏠"),
+    st.Page("views/restaurant_inspections.py", title="Restaurant Inspections", icon="🍽️"),
     st.Page("views/willamette.py", title="Willamette River", icon="🌊"),
     st.Page("views/weather.py", title="Rain & Records", icon="🌧️"),
     st.Page("views/air_quality.py", title="Air Quality", icon="💨"),

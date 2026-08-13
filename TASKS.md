@@ -151,8 +151,12 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
       PathLayer map. Single current polygon, no amendment history (logged).
 - [x] **TOPIC-marriage** — KEPT (feed exists): Oregon OHA Multnomah aggregate
       county×year counts w/ same-sex breakout, 1995–present.
-- [ ] **TOPIC-restaurants** — VERIFIED live (Multnomah MyHealthDepartment JSON POST
-      API; score+name+address, no coords). *Next batch — charts+table page.*
+- [x] **TOPIC-restaurants** — Multnomah County food inspections (MyHealthDepartment
+      `searchInspections` JSON POST API). Rolling 6mo, Food program (restaurants +
+      carts + warehouses); 0-100 sanitation score, name/address (no coords → no
+      map). API hard-caps a query at ~225 rows, so the fetch tiles the window into
+      3-day ranges and recursively splits any that overflow. Score-distribution +
+      monthly volume/avg-score charts + recent-per-establishment table.
 - [~] **TOPIC-licenses** — DROPPED + logged. Portland's is a Revenue tax, not an
       open registry; legacy CivicApps dataset decommissioned.
 - [~] **TOPIC-art** — DROPPED + logged. Only a 42-pt unofficial ~2012 downtown

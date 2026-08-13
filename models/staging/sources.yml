@@ -61,3 +61,11 @@ sources:
         description: >
           BTS international passenger volumes for PDX, monthly 1990-2025
           (year, month, sum_total).
+      - name: restaurant_inspections
+        description: >
+          Multnomah County Environmental Health food-facility inspections from
+          the MyHealthDepartment searchInspections API, rolling ~6 months. One
+          row per inspection with establishment name, address (no coordinates),
+          inspection type/purpose/date, and a 0-100 sanitation score for food
+          restaurants and carts. Pools/spas arrive in the same feed and are
+          filtered to the Food program in staging.
