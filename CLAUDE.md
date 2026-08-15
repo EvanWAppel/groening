@@ -11,7 +11,6 @@ use prek for precommits
 use logging to help ai debug
 do not hide or wrap errors.
 Do not push to master or main
-Use SASPY over other sas libraries
 
 # Groening — project notes
 
