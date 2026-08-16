@@ -83,8 +83,11 @@ high-confidence source: **Building Permits** or **Parks** (PortlandMaps) or
 - [x] **VS-07** — Built `views/building_permits.py` (KPIs + 2 time-series + work-
   class bar + **PyDeck 3D hexbin map** — an upgrade over Elvis's non-spatial
   permits). Verified rendering in-browser. `pytest`/`ruff`/`ty` all green.
-- [ ] **VS-08** — Deploy to Railway from the `Dockerfile`; confirm the warehouse
-  bakes in the image build and the app serves on `$PORT`. Record the smoke test.
+- [x] **VS-08** — Deployed to Railway from the `Dockerfile` (GitHub integration,
+  project `groening`). Warehouse bakes at build time; app serves on `$PORT` at
+  https://groening-production.up.railway.app (HTTP 200, all 13 topics live).
+  Restaurant inspections use a committed snapshot fallback because the
+  MyHealthDepartment API 403s Railway's datacenter IP.
 
 **Exit criteria:** one page live on Railway; `uv run pytest`, `uv run ruff check .`,
 `uv run ty check` all pass locally.
@@ -179,8 +182,10 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
 - [ ] **DEPLOY-02** — Configure `prek` (ruff + ty) pre-commit; `uv run prek
   install`; confirm hooks fire.
 - [ ] **DEPLOY-03** — GitHub Actions CI: pytest + ruff + ty on push/PR.
-- [ ] **DEPLOY-04** — Full Railway deploy with all kept topics; confirm baked
-  warehouse builds and app serves. Note total build time.
+- [x] **DEPLOY-04** — Full Railway deploy with all kept topics; baked warehouse
+  builds (dbt PASS=42) and the app serves. Build ~13 min end to end (the bulk is
+  source fetches plus ~3 min of inspections 403 retries before the snapshot
+  fallback; fail-fast on the first 403 would cut that).
 - [ ] **DEPLOY-05** — Write `README.md`: what Groening is, the ELT + dbt +
   Streamlit story (Data/DE framing), local run steps, and the source list.
 - [ ] **DEPLOY-06** *(optional, interview #7)* — Register in the portfolio
