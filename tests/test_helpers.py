@@ -7,17 +7,20 @@ import math
 import pandas as pd
 import pytest
 
+import build_warehouse
 from build_warehouse import (
     _centroid,
     _collect_window,
     _epoch_to_date,
     _inspection_windows,
+    _load_inspections_snapshot,
     _months_ago,
     _paginate,
     _parse_usgs_dv,
     _search_body,
     _split_window,
     _webmerc_to_wgs84,
+    fetch_inspections,
 )
 
 # ArcGIS epoch-millisecond timestamp for 1996-01-30 (matches a real permit row).
@@ -222,3 +225,30 @@ class TestCollectWindow:
 
         rows = _collect_window(post, "p", "2026-02-12", "2026-02-12")
         assert len(rows) == 225  # capped and accepted; recursion terminates
+
+
+class TestInspectionsSnapshotFallback:
+    """The MyHealthDepartment API 403s datacenter IPs, so a blocked live pull
+    must fall back to the committed snapshot instead of failing the build."""
+
+    def test_snapshot_loads_nonempty_with_key_columns(self):
+        df = _load_inspections_snapshot()
+        assert not df.empty
+        assert "inspectionID" in df.columns
+
+    def test_falls_back_to_snapshot_when_live_blocked(self, monkeypatch):
+        def blocked():
+            raise RuntimeError("inspections POST failed after 4 attempts")
+
+        monkeypatch.setattr(build_warehouse, "_fetch_inspections_live", blocked)
+        df = fetch_inspections()
+        assert not df.empty
+        assert "inspectionID" in df.columns
+
+    def test_live_success_is_returned_without_fallback(self, monkeypatch):
+        sentinel = pd.DataFrame([{"inspectionID": "live-1"}])
+        monkeypatch.setattr(build_warehouse, "_fetch_inspections_live", lambda: sentinel)
+        # Don't touch the committed snapshot file during the test.
+        monkeypatch.setattr(build_warehouse, "_dump_inspections_snapshot", lambda df: None)
+        df = fetch_inspections()
+        assert df["inspectionID"].tolist() == ["live-1"]
