@@ -165,8 +165,10 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
       inspection or incident feed (matches interview drop-if-no-feed).
 - [~] **TOPIC-311** *(extra)* — HELD for Evan. No generic 311 feed; only row-level
       option is illegal-campsite (homelessness) complaints — sensitive; ask first.
-- [ ] **TOPIC-overview** — Overview page LAST: headline metrics from the marts that
-  actually exist. *(after restaurants)*
+- [x] **TOPIC-overview** — Overview landing page (`views/overview.py`, default page).
+  Navigational hub: one headline metric per topic pulled from the marts, each tile
+  linking to its page. All 13 queries verified against the warehouse; rendered
+  in-browser.
 
 ---
 
