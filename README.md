@@ -1,5 +1,7 @@
 # Groening: a city-agnostic open-data pipeline
 
+[![CI](https://github.com/EvanWAppel/groening/actions/workflows/ci.yml/badge.svg)](https://github.com/EvanWAppel/groening/actions/workflows/ci.yml)
+
 Groening is an interactive **Streamlit** app over a **DuckDB** warehouse built with
 **dbt**. It ingests free public datasets about the Portland, OR metro (Multnomah,
 Washington, and Clackamas counties) and presents them as maps, charts, and
@@ -25,11 +27,15 @@ For an Analytics or Data Engineering reviewer, in one screen:
 - **Medallion modeling in dbt.** `build_warehouse.py` lands raw public data in
   `raw.*` tables; dbt models it into `staging` views (light normalization) and
   `marts` tables (viz-ready aggregations). Staging is views, marts are tables.
-- **Data-quality discipline.** A fetch that returns zero rows raises rather than
-  shipping a silently empty page. Broken-TLS hosts are handled per host and logged,
-  never disabled globally. The dbt build gates every mart before the app can read it.
+- **Data-quality tests in dbt.** The marts carry `not_null`, `unique`, and
+  `accepted_values` tests on their grain keys, so a duplicate month, an unexpected
+  null, or an out-of-domain category fails `dbt build` before the app can read bad
+  data. A fetch that returns zero rows raises rather than shipping a silently empty
+  page, and broken-TLS hosts are handled per host and logged, never disabled globally.
+- **PR-gated CI.** GitHub Actions runs `ruff`, `ty`, and `pytest` on every push and
+  pull request (badge above). Every parser and transform is built test-first.
 - **Modern Python toolchain.** `uv` for dependencies, `ruff` for lint, `ty` for
-  types, `pytest` for TDD on every parser and transform, `prek` for pre-commit.
+  types, `pytest` for TDD, `prek` for pre-commit.
 - **Reproducible deploy.** A Docker build bakes the warehouse at build time, so the
   runtime container just serves Streamlit. The database is a rebuilt-on-deploy
   artifact, never committed.

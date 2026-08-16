@@ -1,0 +1,93 @@
+version: 2
+
+# Data-quality tests on the viz-ready marts. These run as part of `dbt build`, so
+# a broken grain (duplicate key, unexpected null, out-of-domain category) fails the
+# warehouse build before the app can read bad data. Keys asserted `unique` are
+# genuine one-row-per-key grains; month/year marts with a second dimension only get
+# `not_null`.
+
+models:
+  - name: mart_permits_monthly
+    description: One row per calendar month of issued building permits.
+    columns:
+      - name: issue_month
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_weather_annual
+    description: One row per year of PDX weather (NOAA GHCN-Daily).
+    columns:
+      - name: year
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_marriage_annual
+    description: One row per year of Multnomah marriage counts.
+    columns:
+      - name: year
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_tourism_annual
+    description: One row per year of PDX international passengers.
+    columns:
+      - name: year
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_bike_by_year
+    description: One row per year bikeway was built.
+    columns:
+      - name: year_built
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_inspections_monthly
+    description: One row per month of restaurant inspections (rolling window).
+    columns:
+      - name: month
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_crime_monthly
+    description: One row per month x crime-against category.
+    columns:
+      - name: month
+        tests:
+          - not_null
+      - name: crime_against
+        tests:
+          - not_null
+
+  - name: mart_air_quality_bad_days
+    description: One row per year x pollutant of unhealthy-air day counts.
+    columns:
+      - name: year
+        tests:
+          - not_null
+      - name: pollutant
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Ozone", "PM2.5"]
+
+  - name: mart_ugb
+    description: Single-row Urban Growth Boundary summary.
+    columns:
+      - name: area_sqmi
+        tests:
+          - not_null
+
+  - name: mart_trees_summary
+    description: Single-row street-tree inventory summary.
+    columns:
+      - name: total_trees
+        tests:
+          - not_null

@@ -1,0 +1,31 @@
+name: CI
+
+# Lint, typecheck, and test on every push and pull request. This does not build
+# the DuckDB warehouse (that needs network access to the public sources and runs
+# at Docker build time); it gates the Python code the app and ETL are built from.
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Typecheck (ty)
+        run: uv run ty check
+
+      - name: Tests (pytest)
+        run: uv run pytest -q

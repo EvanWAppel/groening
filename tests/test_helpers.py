@@ -3,6 +3,7 @@
 import datetime
 import itertools
 import math
+import threading
 
 import pandas as pd
 import pytest
@@ -12,6 +13,7 @@ from build_warehouse import (
     _centroid,
     _collect_window,
     _epoch_to_date,
+    _fetch_inspections_live,
     _inspection_windows,
     _load_inspections_snapshot,
     _months_ago,
@@ -252,3 +254,26 @@ class TestInspectionsSnapshotFallback:
         monkeypatch.setattr(build_warehouse, "_dump_inspections_snapshot", lambda df: None)
         df = fetch_inspections()
         assert df["inspectionID"].tolist() == ["live-1"]
+
+    def test_first_failure_cancels_remaining_windows(self, monkeypatch):
+        """A blocked API fails every window the same way; the live pull must bail
+        after the first failure rather than grind all ~60 windows through retries."""
+        calls = 0
+        lock = threading.Lock()
+
+        def blocked_post(body):
+            nonlocal calls
+            with lock:
+                calls += 1
+            raise RuntimeError("inspections POST failed after 4 attempts")
+
+        monkeypatch.setattr(build_warehouse, "_post_inspections", blocked_post)
+        n_windows = len(_inspection_windows(datetime.date(2026, 8, 16), 6, 3))
+        assert n_windows > 20  # enough windows that fanning through all would be slow
+
+        with pytest.raises(RuntimeError):
+            _fetch_inspections_live()
+
+        # In-flight windows are bounded by the concurrency, so far fewer than the
+        # full window count should ever hit the API.
+        assert calls < n_windows

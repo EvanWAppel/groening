@@ -779,18 +779,27 @@ def _fetch_inspections_live() -> pd.DataFrame:
             pool.submit(_collect_window, _post_inspections, cfg.INSPECTIONS_PATH, ws, we): (ws, we)
             for ws, we in windows
         }
-        for done, fut in enumerate(concurrent.futures.as_completed(futures), 1):
-            ws, we = futures[fut]
-            window_rows = fut.result()
-            collected.append(window_rows)
-            log.info(
-                "  restaurant_inspections window %d/%d (%s..%s): %d rows",
-                done,
-                len(windows),
-                ws,
-                we,
-                len(window_rows),
-            )
+        try:
+            for done, fut in enumerate(concurrent.futures.as_completed(futures), 1):
+                ws, we = futures[fut]
+                window_rows = fut.result()
+                collected.append(window_rows)
+                log.info(
+                    "  restaurant_inspections window %d/%d (%s..%s): %d rows",
+                    done,
+                    len(windows),
+                    ws,
+                    we,
+                    len(window_rows),
+                )
+        except Exception:
+            # A datacenter-IP block (the usual failure off-network) 403s every
+            # window identically, so grinding the remaining ~60 windows through
+            # their retries wastes minutes. Cancel anything not yet started and
+            # re-raise so the caller falls back to the snapshot fast.
+            for pending in futures:
+                pending.cancel()
+            raise
     seen: set = set()
     rows: list[dict] = []
     for window_rows in collected:

@@ -181,7 +181,10 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
   `logs/`, `.venv/`, `.env`, `.DS_Store`, `__pycache__/`.
 - [ ] **DEPLOY-02** — Configure `prek` (ruff + ty) pre-commit; `uv run prek
   install`; confirm hooks fire.
-- [ ] **DEPLOY-03** — GitHub Actions CI: pytest + ruff + ty on push/PR.
+- [x] **DEPLOY-03** — GitHub Actions CI (`.github/workflows/ci.yml`): ruff + ty +
+  pytest on every push/PR via `uv`. Status badge in the README. Plus dbt
+  data-quality tests (`models/marts/schema.yml`): not_null/unique/accepted_values
+  on mart grain keys, run by `dbt build` (19 tests, all pass).
 - [x] **DEPLOY-04** — Full Railway deploy with all kept topics; baked warehouse
   builds (dbt PASS=42) and the app serves. Build ~13 min end to end (the bulk is
   source fetches plus ~3 min of inspections 403 retries before the snapshot
