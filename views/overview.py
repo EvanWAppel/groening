@@ -1,4 +1,4 @@
-"""Overview — the landing page tying every Portland-metro dataset together.
+"""Overview: the landing page tying every Portland-metro dataset together.
 
 A navigational hub: one headline number per topic, each linking to its page.
 Numbers come straight from the dbt marts the other pages already read.
@@ -11,7 +11,7 @@ from app_db import query
 st.title("🌲 Portland Open-Data Explorer")
 st.caption(
     "Public data from the City of Portland, Multnomah County, Metro, and federal "
-    "sources — loaded into DuckDB, modeled with dbt, and served with Streamlit. "
+    "sources, loaded into DuckDB, modeled with dbt, and served with Streamlit. "
     "Thirteen datasets, from building permits to river flow. Pick a tile to dig in."
 )
 
@@ -153,7 +153,17 @@ for start in range(0, len(tiles), per_row):
             st.page_link(page, label="Explore →")
 
 st.divider()
-st.caption(
-    "Built as a portfolio piece: ELT into DuckDB, dbt staging/marts, Streamlit + "
-    "Altair + PyDeck. Source for each dataset is noted on its page."
-)
+about, links = st.columns([3, 2])
+with about:
+    st.caption(
+        "The same pipeline runs on Las Vegas and Seattle data: the only difference "
+        "is one `city_config.py` file. ELT into DuckDB, dbt staging and marts, "
+        "Streamlit with Altair and PyDeck. Each dataset's source is noted on its page."
+    )
+with links:
+    st.caption(
+        "Built by Evan Appel with agentic tooling, kept honest with tests. "
+        "[Portfolio](https://evanappel.me/projects) · "
+        "[GitHub](https://github.com/EvanWAppel/groening) · "
+        "[LinkedIn](https://www.linkedin.com/in/evanwebsterappel)"
+    )
