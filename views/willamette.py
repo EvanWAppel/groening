@@ -4,8 +4,9 @@ import altair as alt
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("🌊 The Willamette River")
+page_header("willamette")
 st.caption(
     "Daily mean streamflow of the Willamette River at Portland (USGS gauge "
     "14211720), 1972–present. Portland's answer to a reservoir-level page — the "
@@ -34,7 +35,7 @@ st.subheader("Monthly average discharge")
 monthly = query("select month, avg_cfs from main.mart_willamette_monthly order by month")
 flow = (
     alt.Chart(monthly)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_area(color="#3f88c5", opacity=0.7)
+    .mark_area(color="#6c8c94", opacity=0.7)
     .encode(
         x=alt.X("month:T", title=None),
         y=alt.Y("avg_cfs:Q", title="Discharge (cfs)", axis=alt.Axis(format="~s")),
@@ -60,7 +61,7 @@ seasonal = query(
 )
 seasonal_chart = (
     alt.Chart(seasonal)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#2e8b57")
+    .mark_bar(color="#346653")
     .encode(
         x=alt.X("month_name:N", sort=list(seasonal["month_name"]), title=None),
         y=alt.Y("avg_cfs:Q", title="Avg discharge (cfs)", axis=alt.Axis(format="~s")),

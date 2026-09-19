@@ -5,8 +5,9 @@ import pydeck as pdk
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("🏗️ Building Permits")
+page_header("building_permits")
 st.caption(
     "PortlandMaps residential building-permit history (since 1995), with "
     "construction valuations and new-unit counts. A window on the city's "
@@ -45,7 +46,7 @@ monthly = query(
 st.subheader("Permits issued per month")
 permits_line = (
     alt.Chart(monthly)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_area(color="#2e8b57", opacity=0.7)
+    .mark_area(color="#346653", opacity=0.7)
     .encode(
         x=alt.X("issue_month:T", title=None),
         y=alt.Y("permit_count:Q", title="Permits"),
@@ -60,7 +61,7 @@ st.altair_chart(permits_line, width="stretch")
 st.subheader("Construction valuation per month")
 val_line = (
     alt.Chart(monthly)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_line(color="#3f88c5")
+    .mark_line(color="#6c8c94")
     .encode(
         x=alt.X("issue_month:T", title=None),
         y=alt.Y("total_valuation:Q", title="Valuation ($)", axis=alt.Axis(format="~s")),
@@ -84,7 +85,7 @@ by_type = query(
 st.subheader("Permits by work class")
 type_chart = (
     alt.Chart(by_type)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#2e8b57")
+    .mark_bar(color="#346653")
     .encode(
         x=alt.X("permit_count:Q", title="Permits"),
         y=alt.Y("work_class:N", sort="-x", title=None),

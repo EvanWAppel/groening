@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 390" role="img" aria-labelledby="map-title map-desc">
+<title id="map-title">Portland, between forest and river</title>
+<desc id="map-desc">An abstract cartographic illustration of Portland: forest contours west of a winding river, a street grid to the east, and bridges connecting the two banks. Schematic, not to scale.</desc>
+<defs>
+  <clipPath id="disc"><circle cx="240" cy="188" r="170"/></clipPath>
+  <pattern id="streets" width="23" height="23" patternUnits="userSpaceOnUse" patternTransform="rotate(-17)"><path d="M23 0H0V23" fill="none" stroke="#9dac94" stroke-width=".65"/></pattern>
+  <pattern id="fine" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M0 5L5 0" stroke="#203e35" stroke-width=".4" opacity=".15"/></pattern>
+</defs>
+<circle cx="240" cy="188" r="182" fill="none" stroke="#c8cebd" stroke-width=".8"/>
+<g clip-path="url(#disc)">
+<path fill="#e4e8d8" d="M60 10H420V360H60z"/>
+<path fill="url(#streets)" d="M60 10H420V360H60z"/>
+<path fill="#a4b597" d="M48 15H231L235 60 205 110 194 173 164 205 147 280 90 304 49 280Z"/>
+<g fill="none" stroke="#5f7c61" stroke-width=".85" opacity=".8">
+<path d="M49 60C130 14 205 25 211 58S159 108 169 151 120 176 124 231 73 257 60 273"/>
+<path d="M38 76C130 32 185 41 190 65S141 111 149 148 102 180 106 224 60 245 48 263"/>
+<path d="M30 96C105 51 170 52 169 75S120 116 129 147 82 186 86 217 51 234 40 248"/>
+<path d="M24 116C105 69 148 69 148 85S100 122 109 146 63 190 66 212 38 225 25 235"/>
+<path d="M20 137C100 88 129 82 126 100S80 125 89 149 44 190 45 209"/>
+<path d="M16 157C85 108 108 100 105 112S60 131 67 155 24 192 24 208"/>
+<path d="M55 29C142 -11 223 12 232 46S182 108 190 152 145 184 143 238 96 278 83 292"/>
+</g>
+<path d="M280 -10C300 30 264 57 253 79S256 124 238 155 201 192 205 223 242 259 238 291 211 326 218 397" fill="none" stroke="#f5f3eb" stroke-width="26"/>
+<path d="M280 -10C300 30 264 57 253 79S256 124 238 155 201 192 205 223 242 259 238 291 211 326 218 397" fill="none" stroke="#49746b" stroke-width="17"/>
+<path d="M280 -10C300 30 264 57 253 79S256 124 238 155 201 192 205 223 242 259 238 291 211 326 218 397" fill="none" stroke="#c0d2bc" stroke-width=".7"/>
+<path d="M295 192l47-14 16 52-47 13zM323 73l23-7 10 33-23 7zM265 299l36-11 10 33-36 11z" fill="#93a984"/>
+<path d="M117 301l67-21 24 78-67 21z" fill="url(#fine)"/>
+<g stroke="#203e35" stroke-width="3" fill="none">
+<path d="M223 105l52-16M210 159l53-16M180 209l54-16M207 262l54-16M210 316l46-14"/>
+</g>
+<g stroke="#f5f3eb" stroke-width=".8"><path d="M223 105l52-16M210 159l53-16M180 209l54-16M207 262l54-16M210 316l46-14"/></g>
+<circle cx="188" cy="222" r="7" fill="#b8492e" stroke="#f5f3eb" stroke-width="3"/>
+<circle cx="188" cy="222" r="14" fill="none" stroke="#b8492e" stroke-width=".8"/>
+<circle cx="328" cy="105" r="30" fill="#b8492e" opacity=".9"/>
+</g>
+<g fill="#203e35" font-family="monospace" font-size="9" letter-spacing="1.5">
+<text x="66" y="110" transform="rotate(-37 66 110)">FOREST PARK</text>
+<text x="278" y="285" transform="rotate(-78 278 285)">WILLAMETTE</text>
+<text x="118" y="258">PORTLAND</text>
+<text x="429" y="50">N</text>
+<path d="M433 82V59m-4 7 4-8 4 8" fill="none" stroke="#203e35"/>
+</g>
+<path d="M50 188H64M416 188H430M240 0V12M240 364V378" stroke="#637064" stroke-width=".7"/>
+<text x="17" y="373" font-family="Georgia,serif" font-style="italic" font-size="14" fill="#637064">The Rose City</text>
+<text x="381" y="373" font-family="monospace" font-size="9" letter-spacing="1" fill="#637064">OREGON, US</text>
+</svg>

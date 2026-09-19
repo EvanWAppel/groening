@@ -4,8 +4,9 @@ import altair as alt
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("✈️ Air Travel")
+page_header("tourism")
 st.caption(
     "International passenger volumes at Portland International Airport (PDX), "
     "monthly since 1990 (US BTS). Portland has no gaming/tourism analog to Las "
@@ -35,7 +36,7 @@ st.subheader("Monthly international passengers")
 monthly = query("select month_date, passengers from main.mart_tourism_monthly order by month_date")
 line = (
     alt.Chart(monthly)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_area(color="#3f88c5", opacity=0.7)
+    .mark_area(color="#6c8c94", opacity=0.7)
     .encode(
         x=alt.X("month_date:T", title=None),
         y=alt.Y("passengers:Q", title="Passengers / month"),
@@ -51,7 +52,7 @@ st.altair_chart(line, width="stretch")
 st.subheader("International passengers per year")
 annual_chart = (
     alt.Chart(full_years)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#2e8b57")
+    .mark_bar(color="#346653")
     .encode(
         x=alt.X("year:O", title=None),
         y=alt.Y("passengers:Q", title="Passengers"),

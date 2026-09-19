@@ -5,8 +5,9 @@ import pydeck as pdk
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("💨 Air Quality")
+page_header("air_quality")
 st.caption(
     "EPA daily PM2.5 and Ozone across the Portland tri-county metro (Multnomah, "
     "Washington, Clackamas). Higher AQI is worse; days above 100 are 'unhealthy "

@@ -5,8 +5,9 @@ import pydeck as pdk
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("🚨 Reported Crime")
+page_header("crime")
 st.caption(
     "Portland Police Bureau reported offenses over the trailing 12 months "
     "(PortlandMaps). Locations are offset to the 100-block; some sensitive "
@@ -35,7 +36,7 @@ by_type = query(
 )
 st.altair_chart(
     alt.Chart(by_type)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#c1121f")
+    .mark_bar(color="#b8492e")
     .encode(
         x=alt.X("n:Q", title="Offenses"),
         y=alt.Y("offense_group:N", sort="-x", title=None),

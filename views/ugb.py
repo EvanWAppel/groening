@@ -6,8 +6,9 @@ import pydeck as pdk
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("🗺️ Urban Growth Boundary")
+page_header("ugb")
 st.caption(
     "The Metro Urban Growth Boundary (UGB) — the line, unique to Oregon, that "
     "separates urban land from rural/farm land across the Portland tri-county "

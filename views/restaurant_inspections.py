@@ -4,8 +4,9 @@ import altair as alt
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("🍽️ Restaurant Inspections")
+page_header("restaurant_inspections")
 st.caption(
     "Multnomah County Environmental Health inspections of food facilities "
     "(restaurants, food carts, warehouses) over the last ~6 months, from the "
@@ -47,7 +48,7 @@ dist = query(
 )
 dist_chart = (
     alt.Chart(dist)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#2a9d8f")
+    .mark_bar(color="#346653")
     .encode(
         x=alt.X("score_band:N", title="Score", sort=alt.SortField("band_order")),
         y=alt.Y("inspections:Q", title="Inspections"),
@@ -65,7 +66,7 @@ monthly = query(
     "select month, inspections, scored, avg_score from main.mart_inspections_monthly order by month"
 )
 base = alt.Chart(monthly)
-volume = base.mark_bar(color="#e9c46a").encode(  # ty: ignore[unresolved-attribute]
+volume = base.mark_bar(color="#b89b52").encode(  # ty: ignore[unresolved-attribute]
     x=alt.X("month:T", title=None),
     y=alt.Y("inspections:Q", title="Inspections"),
     tooltip=[
@@ -74,7 +75,7 @@ volume = base.mark_bar(color="#e9c46a").encode(  # ty: ignore[unresolved-attribu
         alt.Tooltip("avg_score:Q", title="Avg score", format=".1f"),
     ],
 )
-avg_line = base.mark_line(color="#264653", point=True).encode(  # ty: ignore[unresolved-attribute]
+avg_line = base.mark_line(color="#203e35", point=True).encode(  # ty: ignore[unresolved-attribute]
     x=alt.X("month:T", title=None),
     y=alt.Y("avg_score:Q", title="Avg score", scale=alt.Scale(zero=False)),
 )

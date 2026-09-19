@@ -4,8 +4,9 @@ import altair as alt
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("🌧️ Rain & Records")
+page_header("weather")
 st.caption(
     "Nearly 90 years of daily weather at Portland International Airport "
     "(NOAA GHCN-Daily). Portland is temperate, not extreme — except when it is."
@@ -33,7 +34,7 @@ monthly = query(
 )
 rain_chart = (
     alt.Chart(monthly)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#3f88c5")
+    .mark_bar(color="#6c8c94")
     .encode(
         x=alt.X("month_name:N", sort=list(monthly["month_name"]), title=None),
         y=alt.Y("avg_precip_in:Q", title="Avg precip (in)"),
@@ -50,7 +51,7 @@ st.subheader("Typical high / low temperature by month")
 _month_sort = list(monthly["month_name"])
 tmax_line = (
     alt.Chart(monthly)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_line(color="#e8590c")
+    .mark_line(color="#b8492e")
     .encode(
         x=alt.X("month_name:N", sort=_month_sort, title=None),
         y=alt.Y("avg_tmax_f:Q", title="°F"),
@@ -59,7 +60,7 @@ tmax_line = (
 )
 tmin_line = (
     alt.Chart(monthly)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_line(color="#3f88c5")
+    .mark_line(color="#6c8c94")
     .encode(
         x=alt.X("month_name:N", sort=_month_sort, title=None),
         y=alt.Y("avg_tmin_f:Q", title="°F"),
@@ -75,7 +76,7 @@ annual = query(
 )
 year_chart = (
     alt.Chart(annual)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#2e8b57")
+    .mark_bar(color="#346653")
     .encode(
         x=alt.X("year:O", title=None),
         y=alt.Y("total_precip_in:Q", title="Total precip (in)"),

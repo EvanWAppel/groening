@@ -4,8 +4,9 @@ import altair as alt
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("🚲 Bike Network")
+page_header("bike")
 st.caption(
     "Portland's bicycle network from PBOT — segment mileage by the year it was "
     "built. Portland built much of its famous bikeway network in distinct waves; "
@@ -36,7 +37,7 @@ byyear = query(
 )
 cum = (
     alt.Chart(byyear)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_area(color="#2e8b57", opacity=0.7)
+    .mark_area(color="#346653", opacity=0.7)
     .encode(
         x=alt.X("year_built:O", title=None),
         y=alt.Y("cumulative_miles:Q", title="Cumulative miles"),
@@ -52,7 +53,7 @@ st.altair_chart(cum, width="stretch")
 st.subheader("Miles built per year")
 built = (
     alt.Chart(byyear)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#3f88c5")
+    .mark_bar(color="#6c8c94")
     .encode(
         x=alt.X("year_built:O", title=None),
         y=alt.Y("miles_built:Q", title="Miles built"),
@@ -69,7 +70,7 @@ st.subheader("Network by facility type")
 fac = query("select facility, miles, segments from main.mart_bike_by_facility order by miles desc")
 fac_chart = (
     alt.Chart(fac)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#2e8b57")
+    .mark_bar(color="#346653")
     .encode(
         x=alt.X("miles:Q", title="Miles"),
         y=alt.Y("facility:N", sort="-x", title="Facility code"),
