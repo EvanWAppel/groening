@@ -87,6 +87,13 @@ and loop until it holds. Every parser and transform was built test-first with
 
 ## Run locally
 
+The UI presents the datasets as a Portland field guide, with a searchable,
+theme-filtered overview and shared styling across all detail pages. The native
+Streamlit theme lives in `.streamlit/config.toml`; `ui.py` owns the topic index,
+navigation helpers, and shared page elements. `assets/style.css` supplies the
+responsive editorial layout, and `assets/portland.svg` is an original schematic
+illustration. The visual assets use local files and system fonts.
+
 ```bash
 uv sync
 uv run python build_warehouse.py            # fetch public sources -> portland.duckdb

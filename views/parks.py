@@ -5,8 +5,9 @@ import pydeck as pdk
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("🌳 Parks")
+page_header("parks")
 st.caption(
     "Portland Parks & Recreation park boundaries (PortlandMaps). Sized by acreage "
     "and mapped by centroid. Portland publishes no park-level water-feature "
@@ -43,7 +44,7 @@ by_size = query(
 )
 size_chart = (
     alt.Chart(by_size)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#2e8b57")
+    .mark_bar(color="#346653")
     .encode(
         x=alt.X("park_count:Q", title="Parks"),
         y=alt.Y("size_class:N", sort="x", title=None),

@@ -4,8 +4,9 @@ import altair as alt
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("💍 Marriages")
+page_header("marriage")
 st.caption(
     "Marriages recorded in Multnomah County per year (Oregon Health Authority "
     "vital statistics). Oregon doesn't publish per-couple records like Clark "
@@ -32,7 +33,7 @@ annual = query(
 )
 total_chart = (
     alt.Chart(annual)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#c1121f")
+    .mark_bar(color="#b8492e")
     .encode(
         x=alt.X("year:O", title=None),
         y=alt.Y("total:Q", title="Marriages"),
@@ -50,7 +51,7 @@ st.subheader("Same-sex marriages as a share of the total")
 st.caption("Oregon legalized same-sex marriage in May 2014 — note the spike that year.")
 share = (
     alt.Chart(annual)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_line(color="#3f88c5", point=True)
+    .mark_line(color="#6c8c94", point=True)
     .encode(
         x=alt.X("year:O", title=None),
         y=alt.Y("same_sex_pct:Q", title="Same-sex share (%)"),

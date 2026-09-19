@@ -1,0 +1,20 @@
+[theme]
+base = "light"
+primaryColor = "#b8492e"
+backgroundColor = "#f5f3eb"
+secondaryBackgroundColor = "#ebece3"
+textColor = "#203e35"
+font = "sans-serif"
+headingFont = "serif"
+borderColor = "#d2d6c9"
+baseRadius = "small"
+showSidebarBorder = true
+chartCategoricalColors = ["#346653", "#b8492e", "#6c8c94", "#b89b52", "#8a7d91", "#79885e"]
+chartSequentialColors = ["#e8eddf", "#b9cbb1", "#80a283", "#517c61", "#203e35"]
+
+[theme.sidebar]
+backgroundColor = "#ebece3"
+secondaryBackgroundColor = "#dde3d5"
+
+[client]
+toolbarMode = "minimal"

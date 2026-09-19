@@ -1,36 +1,32 @@
-"""Portland-Metro Open-Data Explorer — the interactive demo behind the portfolio.
-
-Raw Portland / Multnomah-metro open data is loaded into DuckDB, modeled with dbt,
-and served here. This entry point just wires up the multi-page navigation; each
-page lives in ``views/`` and queries the dbt marts via ``app_db.query``.
-
-Pages are added as their topic vertical (fetch -> staging -> mart -> page) lands.
-The vertical slice ships Building Permits first.
-"""
+"""Portland's public data, presented as an editorial field guide."""
 
 import streamlit as st
 
+from ui import TOPICS, apply_style, footer, masthead
+
 st.set_page_config(
-    page_title="Portland Open-Data Explorer",
+    page_title="Groening · A Portland Field Guide",
     page_icon="🌲",
     layout="wide",
 )
+apply_style()
 
-pages = [
-    st.Page("views/overview.py", title="Overview", icon="🌲", default=True),
-    st.Page("views/building_permits.py", title="Building Permits", icon="🏗️"),
-    st.Page("views/parks.py", title="Parks", icon="🌳"),
-    st.Page("views/crime.py", title="Reported Crime", icon="🚨"),
-    st.Page("views/short_term_rentals.py", title="Short-Term Rentals", icon="🏠"),
-    st.Page("views/restaurant_inspections.py", title="Restaurant Inspections", icon="🍽️"),
-    st.Page("views/willamette.py", title="Willamette River", icon="🌊"),
-    st.Page("views/weather.py", title="Rain & Records", icon="🌧️"),
-    st.Page("views/air_quality.py", title="Air Quality", icon="💨"),
-    st.Page("views/trees.py", title="Trees", icon="🌲"),
-    st.Page("views/bike.py", title="Bike Network", icon="🚲"),
-    st.Page("views/tourism.py", title="Air Travel", icon="✈️"),
-    st.Page("views/marriage.py", title="Marriages", icon="💍"),
-    st.Page("views/ugb.py", title="Urban Growth Boundary", icon="🗺️"),
-]
+pages = [st.Page("views/overview.py", title="Overview", default=True)]
+pages.extend(st.Page(f"views/{slug}.py", title=info[0]) for slug, info in TOPICS.items())
+page = st.navigation(pages, position="hidden")
 
-st.navigation(pages).run()
+with st.sidebar:
+    st.html('<div class="sidebar-brand">groening<span>.</span></div>'
+            '<div class="sidebar-intro">Portland, Oregon<br>An open-data field guide</div>')
+    st.page_link("views/overview.py", label="Overview", icon=":material/apps:")
+    for category in ("The natural city", "The built city", "Everyday life"):
+        st.html(f'<div class="nav-section">{category}</div>')
+        for slug, (title, group, _) in TOPICS.items():
+            if group == category:
+                st.page_link(f"views/{slug}.py", label=title)
+    st.html('<div class="sidebar-colophon"><b>One city. Thirteen perspectives.</b><br>'
+            'A collection of public records<br>for the endlessly curious.</div>')
+
+masthead()
+page.run()
+footer()

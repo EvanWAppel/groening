@@ -1,19 +1,29 @@
-"""Overview: the landing page tying every Portland-metro dataset together.
+"""A browsable field guide to thirteen Portland public datasets."""
 
-A navigational hub: one headline number per topic, each linking to its page.
-Numbers come straight from the dbt marts the other pages already read.
-"""
+from base64 import b64encode
+from html import escape
+from pathlib import Path
 
 import streamlit as st
 
 from app_db import query
+from ui import ASSETS, TOPICS
 
-st.title("🌲 Portland Open-Data Explorer")
-st.caption(
-    "Public data from the City of Portland, Multnomah County, Metro, and federal "
-    "sources, loaded into DuckDB, modeled with dbt, and served with Streamlit. "
-    "Thirteen datasets, from building permits to river flow. Pick a tile to dig in."
-)
+art = b64encode((ASSETS / "portland.svg").read_bytes()).decode("ascii")
+st.html(f'''<section class="hero">
+    <div><div class="eyebrow">An atlas of everyday life · No. 01</div>
+    <h1>A city, by<br>the <em>numbers.</em></h1>
+    <p class="hero-copy">Beyond the bridges and the rain, there’s a story in every record.
+    Explore the data that shapes Portland — from its tree canopy to its changing streets.</p>
+    <a class="hero-link" href="#datasets">Find your perspective <span>↓</span></a></div>
+    <figure class="hero-art"><img src="data:image/svg+xml;base64,{art}"
+    alt="Illustrated Portland: forest contours, a street grid, and bridges across the Willamette River.">
+    <figcaption><span>FIG. 01 — BETWEEN FOREST &amp; RIVER</span>
+    <span>SCHEMATIC / NOT TO SCALE</span></figcaption></figure>
+    </section>
+    <div class="index-strip"><span><span class="status-dot"></span>PUBLIC DATA, SHARED KNOWLEDGE</span>
+    <span><b>13</b> DATASETS &nbsp; / &nbsp; <b>01</b> CITY</span>
+    <span class="strip-territory">PORTLAND &amp; THE METRO REGION</span></div>''')
 
 # --- Headline numbers, one query per topic (cached by app_db.query) ---
 permits = query(
@@ -140,30 +150,37 @@ tiles = [
     ),
 ]
 
-st.divider()
 
-# 4 tiles per row; each is a bordered card with a headline metric + page link.
-per_row = 4
-for start in range(0, len(tiles), per_row):
-    cols = st.columns(per_row)
-    for col, (page, icon, title, value, sub) in zip(cols, tiles[start : start + per_row]):
-        with col.container(border=True):
-            st.metric(f"{icon} {title}", value)
-            st.caption(sub)
-            st.page_link(page, label="Explore →")
+st.html('<div class="collection-heading" id="datasets"><h2>The city, in detail.</h2>'
+        '<span>EXPLORE THE COLLECTION ↙</span></div>')
+filters, search = st.columns([2, 1], vertical_alignment="bottom")
+with filters:
+    category = st.pills(
+        "Browse by theme", ["All datasets", "The natural city", "The built city", "Everyday life"],
+        default="All datasets", label_visibility="collapsed",
+    )
+with search:
+    term = st.text_input("Search datasets", placeholder="Search the collection…",
+                         label_visibility="collapsed", icon=":material/search:")
 
-st.divider()
-about, links = st.columns([3, 2])
-with about:
-    st.caption(
-        "The same pipeline runs on Las Vegas and Seattle data: the only difference "
-        "is one `city_config.py` file. ELT into DuckDB, dbt staging and marts, "
-        "Streamlit with Altair and PyDeck. Each dataset's source is noted on its page."
-    )
-with links:
-    st.caption(
-        "Built by Evan Appel with agentic tooling, kept honest with tests. "
-        "[Portfolio](https://evanappel.me/projects) · "
-        "[GitHub](https://github.com/EvanWAppel/groening) · "
-        "[LinkedIn](https://www.linkedin.com/in/evanwebsterappel)"
-    )
+visible = [
+    tile for tile in tiles
+    if (category in (None, "All datasets") or TOPICS[Path(tile[0]).stem][1] == category)
+    and term.strip().casefold() in (tile[2] + " " + tile[4]).casefold()
+]
+st.caption(f"{len(visible):02d} / 13 datasets · Select a field to explore its charts, records, and sources.")
+if not visible:
+    st.info("No datasets match. Try another search or choose All datasets.")
+
+with st.container(key="collection"):
+    for start in range(0, len(visible), 3):
+        cols = st.columns(3, gap="small")
+        for col, (page, _icon, title, value, sub) in zip(cols, visible[start : start + 3]):
+            slug = Path(page).stem
+            _, group, number = TOPICS[slug]
+            with col.container(key=f"topic_{slug}"):
+                st.html(f'''<div class="card-heading"><span>{escape(group)}</span><b>{number}</b></div>
+                    <div class="topic-title">{escape(title)}</div>
+                    <div class="topic-value">{escape(value)}</div>
+                    <p class="topic-caption">{escape(sub)}</p>''')
+                st.page_link(page, label=f"Explore {title.lower()} ↗", width="stretch")

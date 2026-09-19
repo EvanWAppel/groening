@@ -5,8 +5,9 @@ import pydeck as pdk
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("🏠 Short-Term Rentals")
+page_header("short_term_rentals")
 st.caption(
     "Portland Accessory Short-Term Rental (ASTR) permits — the city's registry of "
     "Airbnb-type rentals (PortlandMaps). Type A = host-occupied ≤2 bedrooms; "
@@ -37,7 +38,7 @@ with col_l:
     )
     st.altair_chart(
         alt.Chart(by_type)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-        .mark_bar(color="#2e8b57")
+        .mark_bar(color="#346653")
         .encode(
             x=alt.X("n:Q", title="Permits"),
             y=alt.Y("permit_type:N", sort="-x", title=None),
@@ -52,7 +53,7 @@ with col_r:
     )
     st.altair_chart(
         alt.Chart(by_status)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-        .mark_bar(color="#3f88c5")
+        .mark_bar(color="#6c8c94")
         .encode(
             x=alt.X("n:Q", title="Permits"),
             y=alt.Y("permit_status:N", sort="-x", title=None),

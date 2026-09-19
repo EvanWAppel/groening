@@ -5,8 +5,9 @@ import pydeck as pdk
 import streamlit as st
 
 from app_db import query
+from ui import page_header
 
-st.title("🌲 Trees")
+page_header("trees")
 st.caption(
     "Portland's Parks tree inventory — every catalogued tree with its species, "
     "size, and the ecosystem benefits it provides (carbon storage, stormwater "
@@ -31,7 +32,7 @@ species = query(
 )
 sp_chart = (
     alt.Chart(species)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
-    .mark_bar(color="#2e8b57")
+    .mark_bar(color="#346653")
     .encode(
         x=alt.X("tree_count:Q", title="Trees"),
         y=alt.Y("common_name:N", sort="-x", title=None),
