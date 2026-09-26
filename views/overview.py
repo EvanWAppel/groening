@@ -1,4 +1,4 @@
-"""A browsable field guide to fourteen Portland public datasets."""
+"""A browsable field guide to fifteen Portland public datasets."""
 
 from base64 import b64encode
 from html import escape
@@ -22,7 +22,7 @@ st.html(f'''<section class="hero">
     <span>SCHEMATIC / NOT TO SCALE</span></figcaption></figure>
     </section>
     <div class="index-strip"><span><span class="status-dot"></span>PUBLIC DATA, SHARED KNOWLEDGE</span>
-    <span><b>14</b> DATASETS &nbsp; / &nbsp; <b>01</b> CITY</span>
+    <span><b>15</b> DATASETS &nbsp; / &nbsp; <b>01</b> CITY</span>
     <span class="strip-territory">PORTLAND &amp; THE METRO REGION</span></div>''')
 
 # --- Headline numbers, one query per topic (cached by app_db.query) ---
@@ -55,6 +55,7 @@ marriage = query(
 )
 ugb = query("select area_sqmi from main.mart_ugb")
 transit = query("select total_routes, total_stops from main.mart_transit_summary")
+housing = query("select total_projects, regulated_units from main.mart_housing_summary")
 
 # --- Topic tiles: (page, icon, title, headline value, sub-caption) ---
 tiles = [
@@ -156,6 +157,13 @@ tiles = [
         f"{int(transit['total_stops'][0]):,}",
         f"boardable stops on {int(transit['total_routes'][0])} routes",
     ),
+    (
+        "views/housing.py",
+        "🏘️",
+        "Affordable Housing",
+        f"{int(housing['regulated_units'][0]):,}",
+        f"regulated units across {int(housing['total_projects'][0])} projects",
+    ),
 ]
 
 
@@ -176,7 +184,7 @@ visible = [
     if (category in (None, "All datasets") or TOPICS[Path(tile[0]).stem][1] == category)
     and term.strip().casefold() in (tile[2] + " " + tile[4]).casefold()
 ]
-st.caption(f"{len(visible):02d} / 14 datasets · Select a field to explore its charts, records, and sources.")
+st.caption(f"{len(visible):02d} / 15 datasets · Select a field to explore its charts, records, and sources.")
 if not visible:
     st.info("No datasets match. Try another search or choose All datasets.")
 

@@ -500,6 +500,12 @@ def fetch_parks() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def fetch_housing() -> pd.DataFrame:
+    """Portland Housing Bureau regulated affordable-housing portfolio (WGS84 points)."""
+    log.info("Fetching housing from %s ...", cfg.HOUSING_LAYER_URL)
+    return fetch_layer(cfg.HOUSING_LAYER_URL, geometry=True)
+
+
 def fetch_weather() -> pd.DataFrame:
     """NOAA GHCN-Daily for PDX. Keep the core elements; units handled in staging.
 
@@ -894,6 +900,9 @@ def main() -> None:
 
         log.info("Fetching parks (PortlandMaps ArcGIS) ...")
         load_raw(con, "parks", fetch_parks())
+
+        log.info("Fetching housing (PortlandMaps ArcGIS) ...")
+        load_raw(con, "housing", fetch_housing())
 
         log.info("Fetching weather (NOAA GHCN-Daily, PDX) ...")
         load_raw(con, "weather", fetch_weather())

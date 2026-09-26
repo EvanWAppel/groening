@@ -271,8 +271,21 @@ feed is live and machine-readable before wiring; `log()` and drop if not.
   in bare mode. Skipped trips.txt (67k rows) — a service-frequency view for later.
 - [ ] **E7b — 311 / PDX service requests** — pick a **non-sensitive** feed or an
   aggregate (row-level campsite complaints stay HELD; ask Evan before using them).
-- [ ] **E7c — Tree-canopy change over time.**
-- [ ] **E7d — Housing / eviction** data.
+- [~] **E7c — Tree-canopy change over time.** DROPPED + logged
+  (`city_config.DROPPED_TOPICS['tree_canopy']`): Portland's Urban Forestry canopy
+  assessment ships as raster/land-cover snapshots, not a tabular canopy-over-time
+  feed — no machine-readable time series to chart. The Trees page already covers
+  the street-tree inventory.
+- [x] **E7d — Housing.** Built **Affordable Housing** from the Portland Housing
+  Bureau "Rental Portfolio" (PortlandMaps layer 221, verified live: 380 regulated
+  projects, 19,353 regulated units, geocoded). `fetch_housing` (reuses `fetch_layer`)
+  → `stg_housing` → 4 marts (summary, by_year, by_type, map) with 5 data-quality
+  tests. `views/housing.py` (KPIs · units-completed-per-year · by-type bar ·
+  scatter map sized by units), wired into nav, Overview (15th tile + count bump),
+  `SOURCES`, and a `housing_page` exposure. Chose the affordable-housing portfolio
+  over eviction data (no clean Portland eviction feed) and over demolition permits
+  (too permits-adjacent) — logged in `DECISIONS.md`. Full dbt build green (38
+  models, 36 tests); 72 pytest · ruff · ty clean; pages execute in bare mode.
 
 ### Group SERVE — Serving layer & NL query (ambitious / optional)
 

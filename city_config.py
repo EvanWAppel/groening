@@ -41,6 +41,16 @@ COP_TRANSPORTATION = f"{PORTLANDMAPS_OD}/COP_OpenData_Transportation/MapServer"
 PERMITS_LAYER_URL = f"{COP_PLANNING}/89"
 
 # --------------------------------------------------------------------------- #
+# Affordable Housing — Portland Housing Bureau "Rental Portfolio" — VERIFIED   #
+# live 2026-09-26                                                              #
+# --------------------------------------------------------------------------- #
+# Layer 221 = "Rental Portfolio", ~380 point rows: the Housing Bureau's portfolio
+# of financed/regulated affordable rental projects. Total_Unit / Regulated_Units,
+# Year_Complet, Building_Type, Analysis_Area, and bond/TIF flags. Point geometry
+# reprojected to WGS84 via outSR.
+HOUSING_LAYER_URL = f"{COP_PLANNING}/221"
+
+# --------------------------------------------------------------------------- #
 # Parks — VERIFIED live 2026-08-11                                             #
 # --------------------------------------------------------------------------- #
 # Layer 35 = "Parks", 316 boundary polygons. Fields: NAME, ACRES, PROPERTYID.
@@ -348,6 +358,13 @@ SOURCES = {
         "grain": "One row per stop; WGS84 lat/lon for the map.",
         "license": "TriMet open data (GTFS)",
     },
+    "housing": {
+        "title": "Affordable Housing", "page": "housing",
+        "publisher": "Portland Housing Bureau — PortlandMaps",
+        "url": HOUSING_LAYER_URL, "coverage": "Regulated portfolio to date",
+        "grain": "One row per regulated affordable-housing project (WGS84 point).",
+        "license": "City of Portland open data",
+    },
 }
 
 
@@ -361,6 +378,10 @@ DROPPED_TOPICS = {
     "registry; the legacy CivicApps dataset is decommissioned.",
     "public_art": "Only a 42-point unofficial downtown scrape (~2012) exists; RACC "
     "publishes no machine-readable geo feed of its full collection.",
+    "tree_canopy": "Portland's Urban Forestry canopy assessment is published as "
+    "raster/land-cover snapshots, not a clean tabular canopy-over-time feed — no "
+    "machine-readable time series to chart. (The Trees page covers the street-tree "
+    "inventory instead.)",
 }
 
 

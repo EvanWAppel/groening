@@ -69,6 +69,12 @@ sources:
           inspection type/purpose/date, and a 0-100 sanitation score for food
           restaurants and carts. Pools/spas arrive in the same feed and are
           filtered to the Food program in staging.
+      - name: housing
+        description: >
+          Portland Housing Bureau "Rental Portfolio" (COP Planning & Development
+          MapServer layer 221): ~380 financed/regulated affordable-housing
+          projects with total and regulated unit counts, building type, analysis
+          area / urban-renewal area, completion year, and a WGS84 point.
       - name: transit_routes
         description: >
           TriMet GTFS routes.txt (~81 routes): route_id, short/long name,

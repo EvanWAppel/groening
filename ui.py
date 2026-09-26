@@ -25,6 +25,7 @@ TOPICS = {
     "marriage": ("Marriages", "Everyday life", "12"),
     "ugb": ("Urban Growth Boundary", "The built city", "13"),
     "transit": ("Transit", "The built city", "14"),
+    "housing": ("Affordable Housing", "The built city", "15"),
 }
 
 
