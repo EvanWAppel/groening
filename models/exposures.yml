@@ -29,6 +29,7 @@ exposures:
       - ref('mart_transit_summary')
       - ref('mart_housing_summary')
       - ref('mart_heritage_summary')
+      - ref('mart_historic_summary')
 
   - name: building_permits_page
     label: "Page: Building Permits"
@@ -213,6 +214,20 @@ exposures:
       - ref('mart_heritage_by_year')
       - ref('mart_heritage_by_species')
       - ref('mart_heritage_map')
+
+  - name: historic_page
+    label: "Page: Historic Resources"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/historic
+    description: Historic Resource Inventory — by decade built, style, rank, and a density map.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_historic_summary')
+      - ref('mart_historic_by_rank')
+      - ref('mart_historic_by_style')
+      - ref('mart_historic_by_decade')
+      - ref('mart_historic_map')
 
   - name: sources_page
     label: "Page: Sources & Methodology"

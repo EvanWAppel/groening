@@ -69,6 +69,13 @@ sources:
           inspection type/purpose/date, and a 0-100 sanitation score for food
           restaurants and carts. Pools/spas arrive in the same feed and are
           filtered to the Food program in staging.
+      - name: historic
+        description: >
+          PortlandMaps "Historic Resource Inventory" (COP Planning & Development
+          MapServer layer 132): ~4,376 surveyed historic resources with
+          architectural style, significance rank (I/II/III/designated),
+          resource type, neighborhood, architect, and a free-text year built
+          parsed to a 4-digit year (bounded) in staging. WGS84 points.
       - name: heritage_trees
         description: >
           PortlandMaps "Heritage Trees" (COP Environment MapServer layer 26):

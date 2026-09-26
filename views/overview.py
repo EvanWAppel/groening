@@ -1,4 +1,4 @@
-"""A browsable field guide to sixteen Portland public datasets."""
+"""A browsable field guide to seventeen Portland public datasets."""
 
 from base64 import b64encode
 from html import escape
@@ -22,7 +22,7 @@ st.html(f'''<section class="hero">
     <span>SCHEMATIC / NOT TO SCALE</span></figcaption></figure>
     </section>
     <div class="index-strip"><span><span class="status-dot"></span>PUBLIC DATA, SHARED KNOWLEDGE</span>
-    <span><b>16</b> DATASETS &nbsp; / &nbsp; <b>01</b> CITY</span>
+    <span><b>17</b> DATASETS &nbsp; / &nbsp; <b>01</b> CITY</span>
     <span class="strip-territory">PORTLAND &amp; THE METRO REGION</span></div>''')
 
 # --- Headline numbers, one query per topic (cached by app_db.query) ---
@@ -57,6 +57,7 @@ ugb = query("select area_sqmi from main.mart_ugb")
 transit = query("select total_routes, total_stops from main.mart_transit_summary")
 housing = query("select total_projects, regulated_units from main.mart_housing_summary")
 heritage = query("select total_trees, first_year from main.mart_heritage_summary")
+historic = query("select total_resources, oldest_year from main.mart_historic_summary")
 
 # --- Topic tiles: (page, icon, title, headline value, sub-caption) ---
 tiles = [
@@ -172,6 +173,13 @@ tiles = [
         f"{int(heritage['total_trees'][0]):,}",
         f"protected landmark trees since {int(heritage['first_year'][0])}",
     ),
+    (
+        "views/historic.py",
+        "🏛️",
+        "Historic Resources",
+        f"{int(historic['total_resources'][0]):,}",
+        f"surveyed sites, oldest from {int(historic['oldest_year'][0])}",
+    ),
 ]
 
 
@@ -192,7 +200,7 @@ visible = [
     if (category in (None, "All datasets") or TOPICS[Path(tile[0]).stem][1] == category)
     and term.strip().casefold() in (tile[2] + " " + tile[4]).casefold()
 ]
-st.caption(f"{len(visible):02d} / 16 datasets · Select a field to explore its charts, records, and sources.")
+st.caption(f"{len(visible):02d} / 17 datasets · Select a field to explore its charts, records, and sources.")
 if not visible:
     st.info("No datasets match. Try another search or choose All datasets.")
 

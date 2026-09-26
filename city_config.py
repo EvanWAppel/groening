@@ -51,6 +51,17 @@ PERMITS_LAYER_URL = f"{COP_PLANNING}/89"
 HOUSING_LAYER_URL = f"{COP_PLANNING}/221"
 
 # --------------------------------------------------------------------------- #
+# Historic Resources — City Historic Resource Inventory — VERIFIED live         #
+# 2026-09-26                                                                   #
+# --------------------------------------------------------------------------- #
+# Layer 132 = "Historic Resource Inventory", ~4,376 points: surveyed historic
+# buildings/sites with architectural STYLE, significance RANK (I/II/III/
+# designated), RESOURCE_TYPE, NEIGHBORHOOD, ARCHITECT, and a free-text YEAR_BUILT
+# ("ca. 1907", "1945-1951") parsed to a 4-digit year in staging (bounded to a
+# sane range — some rows carry bad values). Point geometry -> WGS84.
+HISTORIC_LAYER_URL = f"{COP_PLANNING}/132"
+
+# --------------------------------------------------------------------------- #
 # Parks — VERIFIED live 2026-08-11                                             #
 # --------------------------------------------------------------------------- #
 # Layer 35 = "Parks", 316 boundary polygons. Fields: NAME, ACRES, PROPERTYID.
@@ -376,6 +387,13 @@ SOURCES = {
         "publisher": "Portland Parks & Recreation (Urban Forestry) — PortlandMaps",
         "url": HERITAGE_TREES_URL, "coverage": "Designated 1973 – present",
         "grain": "One row per designated heritage tree; active (non-delisted) only in staging.",
+        "license": "City of Portland open data",
+    },
+    "historic": {
+        "title": "Historic Resources", "page": "historic",
+        "publisher": "City of Portland (Historic Resource Inventory) — PortlandMaps",
+        "url": HISTORIC_LAYER_URL, "coverage": "Surveyed inventory",
+        "grain": "One row per historic resource; free-text year parsed to a 4-digit year.",
         "license": "City of Portland open data",
     },
 }
