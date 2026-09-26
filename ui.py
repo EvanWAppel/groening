@@ -27,6 +27,7 @@ TOPICS = {
     "transit": ("Transit", "The built city", "14"),
     "housing": ("Affordable Housing", "The built city", "15"),
     "heritage_trees": ("Heritage Trees", "The natural city", "16"),
+    "historic": ("Historic Resources", "The built city", "17"),
 }
 
 

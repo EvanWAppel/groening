@@ -506,6 +506,12 @@ def fetch_housing() -> pd.DataFrame:
     return fetch_layer(cfg.HOUSING_LAYER_URL, geometry=True)
 
 
+def fetch_historic() -> pd.DataFrame:
+    """City Historic Resource Inventory — surveyed historic sites (WGS84 points)."""
+    log.info("Fetching historic from %s ...", cfg.HISTORIC_LAYER_URL)
+    return fetch_layer(cfg.HISTORIC_LAYER_URL, geometry=True)
+
+
 def fetch_weather() -> pd.DataFrame:
     """NOAA GHCN-Daily for PDX. Keep the core elements; units handled in staging.
 
@@ -909,6 +915,9 @@ def main() -> None:
 
         log.info("Fetching housing (PortlandMaps ArcGIS) ...")
         load_raw(con, "housing", fetch_housing())
+
+        log.info("Fetching historic (PortlandMaps ArcGIS) ...")
+        load_raw(con, "historic", fetch_historic())
 
         log.info("Fetching weather (NOAA GHCN-Daily, PDX) ...")
         load_raw(con, "weather", fetch_weather())

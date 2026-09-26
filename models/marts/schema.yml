@@ -200,3 +200,41 @@ models:
       - name: latitude
         tests:
           - not_null
+
+  - name: mart_historic_by_rank
+    description: One row per significance rank.
+    columns:
+      - name: significance_rank
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_historic_by_style
+    description: One row per architectural style.
+    columns:
+      - name: style
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_historic_by_decade
+    description: One row per decade built.
+    columns:
+      - name: decade
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_historic_summary
+    description: Single-row historic-resources headline summary.
+    columns:
+      - name: total_resources
+        tests:
+          - not_null
+
+  - name: mart_historic_map
+    description: One row per historic resource (WGS84).
+    columns:
+      - name: latitude
+        tests:
+          - not_null
