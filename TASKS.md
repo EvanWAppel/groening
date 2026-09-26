@@ -196,8 +196,100 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
 
 ---
 
+## Phase 2 — portfolio enhancements (backlog)
+
+Sharpens the piece for a Data/DE reviewer. See `PRD.md` §12. v1 (deployed, tested
+explorer) is done; these are proposed, not committed. **TDD every parser/transform
+as usual.** Log a `DECISIONS.md` entry for each item that carries a real trade-off
+(E5 comparison home, E6 package-vs-scaffold) before building it.
+
+### Group PROVE — Make the invisible engineering visible (start here; high signal)
+
+Groups PROVE items are largely independent (different files) — fan out safely.
+
+- [x] **E1 — Sources & Methodology page.** `views/sources.py` (registered in nav +
+  sidebar under "Reference"): a methodology blurb + a sortable catalog table
+  (dataset, publisher, coverage, **row count from `mart_build_metadata`**, grain/
+  transform, terms, source-endpoint link) + a Dropped-topics section. Provenance
+  lives in `city_config.SOURCES` (city-specific → the one "which city" file);
+  `source_catalog_rows()` joins it to the build-provenance counts and **raises on
+  any undocumented raw table** so a new source can't ship without a Sources entry.
+  Dropped list moved from `build_warehouse` to `city_config.DROPPED_TOPICS` (so the
+  app never imports the build module + its IPv4 socket monkeypatch). TDD'd (8 tests);
+  page executes clean in bare mode. **License strings are accurate for federal
+  sources (public domain) but descriptive for municipal/state — flagged in
+  `BLOCKED.md` to tighten before public use.**
+- [x] **E2 — Build-provenance banner.** `build_warehouse.collect_build_metadata`
+  (TDD'd, 4 tests) stamps `raw.build_metadata` — one row per loaded raw table
+  (name, row_count, shared ISO built_at) — from `_raw_row_counts(con)` after all
+  fetches land. dbt: `stg_build_metadata` view + `mart_build_metadata` table
+  (per-source grain; unique/not_null tests, all pass). `ui.build_stamp()` renders
+  "Data as of \<date\> · N sources · M rows" in the footer (verified: *Sept 26,
+  2026 · 13 sources · 222,682 rows*). Grain choice logged in `DECISIONS.md`. Full
+  suite 48 passed · ruff · ty clean.
+- [x] **E3 — dbt exposures + lineage view.** `models/exposures.yml` declares one
+  exposure per Streamlit page (15) with `depends_on` its marts, so lineage is
+  source→staging→mart→page-complete (`dbt build` parses all 15). Chose option (b):
+  `dbt_artifacts.lineage_edges` / `build_lineage_dot` parse `target/manifest.json`
+  into a Graphviz DAG rendered on the Sources page via `st.graphviz_chart`. TDD'd
+  (manifest fixture → edges/layers/DOT). Verified against the real manifest: 86
+  edges, 14 sources → 15 pages.
+- [x] **E4 — In-app data-quality summary.** `dbt_artifacts.summarize_dbt_tests`
+  parses `target/run_results.json` into pass/fail counts + a per-type breakdown;
+  the Sources page shows "**23 of 23 dbt tests all passing**" with not_null/unique/
+  accepted_values metric tiles. TDD'd (5 tests, inline fixtures); verified against
+  the real artifact (15 not_null · 7 unique · 1 accepted_values). Both E3/E4 read
+  dbt `target/` at runtime — trade-off logged in `DECISIONS.md`; parsers degrade to
+  an explicit "run dbt build" note if artifacts are absent.
+
+### Group MULTI — Multi-city template (the differentiator)
+
+- [ ] **E5 — Cross-city comparison.** `ATTACH` (read-only) Portland + Vegas
+  (Elvis) + Seattle (Robbins) `.duckdb` files; compare shared marts (weather, air
+  quality, permits). **DECISION first:** where it lives (a Groening page vs. a
+  standalone "trilogy" app) and how the three artifacts are co-located at
+  build/deploy. TDD the cross-city query/normalize helpers.
+- [ ] **E6 — Extract the shared engine.** **DECISION first:** full pip-installable
+  package (all three repos depend on it, `city_config.py` the only per-city surface)
+  vs. the lighter `make new-city` scaffold + "target a new metro" guide. Start with
+  the scaffold+guide unless Evan opts into the package. Touches multiple repos —
+  own git worktree per repo, merge one at a time (per ROCRLL Orchestrate).
+
+### Group DATA — Portland-specific expansion (breadth)
+
+Each is an independent fetch → `stg_` → `mart_` → `views/*.py`, TDD'd. Verify the
+feed is live and machine-readable before wiring; `log()` and drop if not.
+
+- [x] **E7a — TriMet GTFS** (transit). Verified live (GTFS zip, 81 routes / 6,027
+  stops). `_parse_gtfs` (TDD'd, 3 tests) pulls routes.txt + stops.txt →
+  `raw.transit_routes`/`raw.transit_stops`; staging maps `route_type`→mode and
+  filters to boardable stops; 4 marts (summary, by_mode, routes, stops_map) with 8
+  data-quality tests. New `views/transit.py` (KPIs · routes-by-mode bar · stops
+  hexbin map · route list), wired into nav, Overview (14th tile + count bump),
+  `SOURCES` (2 entries → transit page), and a `transit_page` dbt exposure. Full
+  dbt build green (34 models, 31 tests); 72 pytest · ruff · ty clean; pages execute
+  in bare mode. Skipped trips.txt (67k rows) — a service-frequency view for later.
+- [ ] **E7b — 311 / PDX service requests** — pick a **non-sensitive** feed or an
+  aggregate (row-level campsite complaints stay HELD; ask Evan before using them).
+- [ ] **E7c — Tree-canopy change over time.**
+- [ ] **E7d — Housing / eviction** data.
+
+### Group SERVE — Serving layer & NL query (ambitious / optional)
+
+- [ ] **E8 — Read-only JSON API.** FastAPI (or Streamlit-adjacent) over the same
+  DuckDB exposing the marts as JSON. TDD the endpoints. Keep it read-only.
+- [ ] **E9 — Natural-language query (text-to-SQL).** 🔴 **Gated on the
+  personal-key guardrail** — needs a dedicated isolated workspace + a scoped,
+  spend-capped key, never Evan's personal Anthropic key (see global `CLAUDE.md`).
+  When this task is picked up, add the key checklist to `BLOCKED.md` and do not
+  start until it's satisfied and Evan confirms.
+
+---
+
 ## Suggested sequencing
 
 - **Now:** VS (vertical slice, deployed) → CONFIG/ETL alongside.
 - **Then:** re-run interview §7.1, record outcomes, fan out Group TOPIC.
 - **Finish:** Overview page, DEPLOY, docs.
+- **Phase 2:** PROVE first (fastest, highest signal) → MULTI (E5 comparison) →
+  DATA / SERVE as capacity allows. Log the E5/E6 decisions before building.

@@ -69,3 +69,20 @@ sources:
           inspection type/purpose/date, and a 0-100 sanitation score for food
           restaurants and carts. Pools/spas arrive in the same feed and are
           filtered to the Food program in staging.
+      - name: transit_routes
+        description: >
+          TriMet GTFS routes.txt (~81 routes): route_id, short/long name,
+          route_type (GTFS mode enum), and route_color. route_type is mapped to
+          a human mode label (Bus, MAX Light Rail, WES Commuter Rail, Streetcar,
+          Aerial Tram) in staging.
+      - name: transit_stops
+        description: >
+          TriMet GTFS stops.txt (~6,027 stops): stop_id, stop_name, WGS84
+          stop_lat/stop_lon, and location_type (0/blank = a boardable stop;
+          1 = station, 2 = entrance — filtered out for the map in staging).
+      - name: build_metadata
+        description: >
+          Build provenance stamped by build_warehouse.py after every source
+          lands: one row per loaded raw table (table_name, row_count) with a
+          shared ISO build timestamp (built_at). Powers the app's "Data as of
+          <date> · N sources · M rows" provenance banner.

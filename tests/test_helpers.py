@@ -1,9 +1,11 @@
 """TDD for the pure warehouse-build helpers ported from Elvis."""
 
 import datetime
+import io
 import itertools
 import math
 import threading
+import zipfile
 
 import pandas as pd
 import pytest
@@ -18,10 +20,12 @@ from build_warehouse import (
     _load_inspections_snapshot,
     _months_ago,
     _paginate,
+    _parse_gtfs,
     _parse_usgs_dv,
     _search_body,
     _split_window,
     _webmerc_to_wgs84,
+    collect_build_metadata,
     fetch_inspections,
 )
 
@@ -227,6 +231,75 @@ class TestCollectWindow:
 
         rows = _collect_window(post, "p", "2026-02-12", "2026-02-12")
         assert len(rows) == 225  # capped and accepted; recursion terminates
+
+
+_GTFS_FIXTURE_MEMBERS = {
+    "transit_routes": ("routes.txt", ["route_id", "route_short_name", "route_type"]),
+    "transit_stops": ("stops.txt", ["stop_id", "stop_lat", "stop_lon"]),
+}
+
+
+class TestParseGtfs:
+    """GTFS is a zip of CSVs; the parser pulls selected columns from named members."""
+
+    def _zip(self) -> bytes:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            # utf-8-sig: real feeds ship a BOM on the header, which must not corrupt
+            # the first column name.
+            z.writestr(
+                "routes.txt",
+                "﻿route_id,route_short_name,route_type,route_url\n"
+                "100,72,3,http://x\n200,MAX,0,http://y\n",
+            )
+            z.writestr("stops.txt", "stop_id,stop_lat,stop_lon\nS1,45.5,-122.6\n")
+        return buf.getvalue()
+
+    def test_extracts_selected_columns_in_requested_order(self):
+        out = _parse_gtfs(self._zip(), _GTFS_FIXTURE_MEMBERS)
+        assert set(out) == {"transit_routes", "transit_stops"}
+        assert list(out["transit_routes"].columns) == ["route_id", "route_short_name", "route_type"]
+
+    def test_reads_all_rows_and_strips_bom(self):
+        out = _parse_gtfs(self._zip(), _GTFS_FIXTURE_MEMBERS)
+        assert len(out["transit_routes"]) == 2
+        # BOM stripped -> the id column is addressable by its plain name.
+        assert list(out["transit_routes"]["route_id"]) == ["100", "200"]
+
+    def test_ids_stay_strings_to_preserve_leading_zeros(self):
+        out = _parse_gtfs(self._zip(), _GTFS_FIXTURE_MEMBERS)
+        assert out["transit_stops"]["stop_id"].tolist() == ["S1"]
+        # Values stay strings (not coerced to ints), regardless of pandas' backend.
+        assert out["transit_routes"]["route_type"].tolist() == ["3", "0"]
+        assert all(isinstance(v, str) for v in out["transit_routes"]["route_id"])
+
+
+class TestCollectBuildMetadata:
+    """The build stamps one provenance row per loaded raw table, so the app can
+    show "Data as of <date> · N sources · M rows" from a mart, not guesswork."""
+
+    BUILT = datetime.datetime(2026, 9, 26, 14, 30, tzinfo=datetime.UTC)
+
+    def test_one_row_per_table_with_shared_timestamp(self):
+        df = collect_build_metadata({"parks": 316, "trees": 25734}, self.BUILT)
+        assert len(df) == 2
+        assert set(df["table_name"]) == {"parks", "trees"}
+        assert list(df["built_at"].unique()) == [self.BUILT.isoformat()]
+
+    def test_rows_are_sorted_by_table_for_determinism(self):
+        df = collect_build_metadata({"trees": 1, "air_quality": 2, "parks": 3}, self.BUILT)
+        assert list(df["table_name"]) == ["air_quality", "parks", "trees"]
+
+    def test_row_counts_are_integers(self):
+        df = collect_build_metadata({"parks": 316}, self.BUILT)
+        assert df["row_count"].tolist() == [316]
+        assert df["row_count"].dtype.kind == "i"
+
+    def test_totals_reconstruct_the_banner_numbers(self):
+        df = collect_build_metadata({"parks": 316, "trees": 25734, "ugb": 1}, self.BUILT)
+        # The mart aggregates exactly these into the "N sources · M rows" banner.
+        assert len(df) == 3
+        assert int(df["row_count"].sum()) == 26051
 
 
 class TestInspectionsSnapshotFallback:

@@ -5,6 +5,8 @@ from pathlib import Path
 
 import streamlit as st
 
+from app_db import query
+
 ASSETS = Path(__file__).parent / "assets"
 
 # One index keeps the navigation and dataset collection in sync.
@@ -22,6 +24,7 @@ TOPICS = {
     "tourism": ("Air Travel", "Everyday life", "11"),
     "marriage": ("Marriages", "Everyday life", "12"),
     "ugb": ("Urban Growth Boundary", "The built city", "13"),
+    "transit": ("Transit", "The built city", "14"),
 }
 
 
@@ -41,11 +44,26 @@ def page_header(topic: str) -> None:
     st.title(title)
 
 
+def build_stamp() -> str:
+    """"Data as of <date> · N sources · M rows", read from the provenance mart.
+
+    The warehouse is baked at build time, so this is exactly how fresh the data
+    is. Reads mart_build_metadata, which build_warehouse.py stamps every build.
+    """
+    row = query(
+        "select max(built_at) as built_at, count(*) as sources, "
+        "sum(row_count) as rows from main.mart_build_metadata"
+    ).iloc[0]
+    built = row["built_at"].strftime("%B %-d, %Y")
+    return f"Data as of {built} · {int(row['sources'])} sources · {int(row['rows']):,} rows"
+
+
 def footer() -> None:
-    st.html('''<footer class="site-footer">
+    st.html(f'''<footer class="site-footer">
         <div><span class="footer-brand">groening.</span><p>A closer look at the place we call Portland.</p></div>
         <div><span class="eyebrow">OPEN DATA. OPEN CURIOSITY.</span>
         <p>Public records, thoughtfully explored. Coverage varies by dataset.</p>
+        <p class="footer-provenance">{escape(build_stamp())}</p>
         <p>By <a href="https://evanappel.me/projects" target="_blank" rel="noopener noreferrer">Evan Appel ↗</a>
         &nbsp;·&nbsp; <a href="https://github.com/EvanWAppel/groening" target="_blank" rel="noopener noreferrer">View the source ↗</a></p></div>
         </footer>''')

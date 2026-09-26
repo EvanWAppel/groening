@@ -91,3 +91,51 @@ models:
       - name: total_trees
         tests:
           - not_null
+
+  - name: mart_build_metadata
+    description: One row per loaded raw table — build provenance for the "Data as of" banner.
+    columns:
+      - name: table_name
+        tests:
+          - not_null
+          - unique
+      - name: row_count
+        tests:
+          - not_null
+      - name: built_at
+        tests:
+          - not_null
+
+  - name: mart_transit_routes
+    description: One row per TriMet route.
+    columns:
+      - name: route_id
+        tests:
+          - not_null
+          - unique
+      - name: mode
+        tests:
+          - not_null
+
+  - name: mart_transit_by_mode
+    description: One row per transit mode with its route count.
+    columns:
+      - name: mode
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_transit_stops_map
+    description: One row per boardable transit stop (WGS84).
+    columns:
+      - name: stop_id
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_transit_summary
+    description: Single-row transit headline summary.
+    columns:
+      - name: total_routes
+        tests:
+          - not_null

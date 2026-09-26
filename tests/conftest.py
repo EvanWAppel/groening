@@ -1,6 +1,20 @@
 """Shared pytest fixtures (DRY) for the Groening warehouse-build helpers."""
 
+from unittest.mock import Mock
+
 import pytest
+
+import build_warehouse
+
+
+@pytest.fixture
+def network(monkeypatch):
+    """Replace the download network and clock; no external requests or real waits."""
+    opener = Mock()
+    sleep = Mock()
+    monkeypatch.setattr(build_warehouse.urllib.request, "urlopen", opener)
+    monkeypatch.setattr(build_warehouse.time, "sleep", sleep)
+    return opener, sleep
 
 
 @pytest.fixture

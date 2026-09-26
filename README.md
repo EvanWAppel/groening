@@ -5,8 +5,8 @@
 Groening is an interactive **Streamlit** app over a **DuckDB** warehouse built with
 **dbt**. It ingests free public datasets about the Portland, OR metro (Multnomah,
 Washington, and Clackamas counties) and presents them as maps, charts, and
-searchable tables. Thirteen datasets, from building permits to river flow, each
-wired end to end from a live public source to a mart to a page.
+searchable tables. Fourteen datasets, from building permits to river flow to
+transit, each wired end to end from a live public source to a mart to a page.
 
 The point of interest for a reviewer is not Portland. It is that the whole pipeline
 is parameterized: the same engine runs on Las Vegas
@@ -70,12 +70,14 @@ permits, crime, and the street-tree inventory.
 
 ## The datasets
 
-Thirteen topics, each fetch to mart to page: Building Permits, Parks, Reported
+Fourteen topics, each fetch to mart to page: Building Permits, Parks, Reported
 Crime, Short-Term Rentals, Restaurant Inspections, Willamette River flow, Rain and
-Records, Air Quality, Street Trees, Bike Network, Air Travel, Marriages, and the
-Urban Growth Boundary. Topics that Portland does not publish in a machine-readable
-form were dropped and logged rather than faked. The Overview page reads a headline
-number from each mart and links into its detail page.
+Records, Air Quality, Street Trees, Bike Network, Air Travel, Marriages, the
+Urban Growth Boundary, and Transit (TriMet GTFS). Topics that Portland does not
+publish in a machine-readable form were dropped and logged rather than faked. A
+Sources & Methodology page documents every feed's provenance, per-source row
+counts, the dbt test summary, and the full pipeline lineage; the Overview page
+reads a headline number from each mart and links into its detail page.
 
 ## How it was built
 
@@ -107,6 +109,12 @@ Railway builds from the `Dockerfile`, which runs `build_warehouse.py && dbt buil
 at build time so the runtime container only serves Streamlit on `$PORT`. The
 `*.duckdb` file is a git-ignored build artifact, rebuilt on every deploy. No
 secrets: every source is public, and `$PORT` is injected by the platform.
+
+The shared GET helper retries HTTP 500, 502, 503, and 504 responses up to four
+attempts, waiting 5, 10, and 20 seconds between attempts. Each retry is logged.
+Persistent failures still fail the build with the original error; no empty or
+stale replacement data is substituted. Errors while reading a response body
+are not retried by this helper.
 
 ## About
 
