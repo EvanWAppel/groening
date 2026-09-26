@@ -70,6 +70,7 @@
 .footer-brand { font-family: var(--display); font-size: 38px; text-transform: uppercase; letter-spacing: 0; line-height: 1; display: inline-block; transform: rotate(-2deg); }
 .site-footer p { font-size: 11px; line-height: 1.8; color: var(--muted); margin: 10px 0 0; }
 .site-footer a { color: var(--ink); text-underline-offset: 4px; }
+.footer-provenance { font: 10px/1.6 ui-monospace, monospace !important; letter-spacing: .1em; text-transform: uppercase; color: var(--rust) !important; }
 a:focus-visible, button:focus-visible { outline: 2px solid var(--rust) !important; outline-offset: 4px; }
 @media (min-width: 1600px) { .hero h1 { font-size: 94px; } }
 @media (max-width: 1100px) { [data-testid="stMainBlockContainer"] { padding: 2rem; } .hero h1 { font-size: 64px; } [class*="st-key-topic_"] { padding: 18px; } }

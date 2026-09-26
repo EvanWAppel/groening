@@ -13,6 +13,7 @@ apply_style()
 
 pages = [st.Page("views/overview.py", title="Overview", default=True)]
 pages.extend(st.Page(f"views/{slug}.py", title=info[0]) for slug, info in TOPICS.items())
+pages.append(st.Page("views/sources.py", title="Sources & Methodology"))
 page = st.navigation(pages, position="hidden")
 
 with st.sidebar:
@@ -24,7 +25,9 @@ with st.sidebar:
         for slug, (title, group, _) in TOPICS.items():
             if group == category:
                 st.page_link(f"views/{slug}.py", label=title)
-    st.html('<div class="sidebar-colophon"><b>One city. Thirteen perspectives.</b><br>'
+    st.html('<div class="nav-section">Reference</div>')
+    st.page_link("views/sources.py", label="Sources & Methodology")
+    st.html('<div class="sidebar-colophon"><b>One city. Fourteen perspectives.</b><br>'
             'A collection of public records<br>for the endlessly curious.</div>')
 
 masthead()

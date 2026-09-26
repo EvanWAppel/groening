@@ -1,0 +1,197 @@
+version: 2
+
+# Each Streamlit page is a dbt *exposure* — a downstream consumer of the marts.
+# Declaring them makes lineage complete (source -> staging -> mart -> page), so
+# `dbt docs` and the app's pipeline-lineage view show what each mart feeds.
+
+exposures:
+  - name: overview_page
+    label: "Page: Overview"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/
+    description: Landing page — one headline metric per topic, read from every mart.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_permits_monthly')
+      - ref('mart_parks')
+      - ref('mart_crime_by_type')
+      - ref('mart_short_term_rentals')
+      - ref('mart_inspections_monthly')
+      - ref('mart_willamette_monthly')
+      - ref('mart_weather_annual')
+      - ref('mart_air_quality_bad_days')
+      - ref('mart_trees_summary')
+      - ref('mart_bike_by_year')
+      - ref('mart_tourism_annual')
+      - ref('mart_marriage_annual')
+      - ref('mart_ugb')
+      - ref('mart_transit_summary')
+
+  - name: building_permits_page
+    label: "Page: Building Permits"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/building_permits
+    description: Building-permit KPIs, time series, work-class bars, and a 3D hexbin map.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_permits_monthly')
+      - ref('mart_permits_by_type')
+      - ref('mart_permits_map')
+
+  - name: parks_page
+    label: "Page: Parks"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/parks
+    description: Park acreage and locations.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_parks')
+
+  - name: crime_page
+    label: "Page: Reported Crime"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/crime
+    description: Reported crime by type, an hour x weekday heatmap, and a hexbin map.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_crime_by_type')
+      - ref('mart_crime_by_hour_weekday')
+      - ref('mart_crime_map')
+
+  - name: short_term_rentals_page
+    label: "Page: Short-Term Rentals"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/short_term_rentals
+    description: Registered short-term-rental permits.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_short_term_rentals')
+
+  - name: restaurant_inspections_page
+    label: "Page: Restaurant Inspections"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/restaurant_inspections
+    description: Sanitation-score distribution, monthly volume, and recent inspections.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_inspections_monthly')
+      - ref('mart_inspections_recent')
+      - ref('mart_inspections_score_dist')
+
+  - name: willamette_page
+    label: "Page: Willamette River"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/willamette
+    description: Willamette River discharge — daily series and monthly averages.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_willamette_daily')
+      - ref('mart_willamette_monthly')
+
+  - name: weather_page
+    label: "Page: Rain & Records"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/weather
+    description: PDX rainfall and temperature — annual, monthly, and wettest days.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_weather_annual')
+      - ref('mart_weather_monthly')
+      - ref('mart_weather_wettest_days')
+
+  - name: air_quality_page
+    label: "Page: Air Quality"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/air_quality
+    description: PM2.5 / Ozone trends, unhealthy-air days, and per-site readings.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_air_quality_bad_days')
+      - ref('mart_air_quality_by_site')
+      - ref('mart_air_quality_monthly')
+
+  - name: trees_page
+    label: "Page: Trees"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/trees
+    description: Street-tree inventory — species mix, benefits summary, and a hexbin map.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_trees_by_species')
+      - ref('mart_trees_summary')
+      - ref('mart_trees_map')
+
+  - name: bike_page
+    label: "Page: Bike Network"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/bike
+    description: Bikeway miles built per year and by facility type.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_bike_by_year')
+      - ref('mart_bike_by_facility')
+
+  - name: tourism_page
+    label: "Page: Air Travel"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/tourism
+    description: PDX international passenger volumes — annual and monthly.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_tourism_annual')
+      - ref('mart_tourism_monthly')
+
+  - name: marriage_page
+    label: "Page: Marriages"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/marriage
+    description: Multnomah County marriage counts by year.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_marriage_annual')
+
+  - name: ugb_page
+    label: "Page: Urban Growth Boundary"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/ugb
+    description: Metro Urban Growth Boundary area and boundary map.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_ugb')
+
+  - name: transit_page
+    label: "Page: Transit"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/transit
+    description: TriMet routes by mode, a boardable-stops map, and the full route list.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_transit_summary')
+      - ref('mart_transit_by_mode')
+      - ref('mart_transit_routes')
+      - ref('mart_transit_stops_map')
+
+  - name: sources_page
+    label: "Page: Sources & Methodology"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/sources
+    description: Provenance, per-source row counts, dbt test summary, and pipeline lineage.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_build_metadata')

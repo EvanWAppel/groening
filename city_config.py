@@ -196,6 +196,28 @@ INSPECTIONS_CONCURRENCY = 3
 INSPECTIONS_RETRIES = 4
 
 # --------------------------------------------------------------------------- #
+# Transit — TriMet GTFS static feed — VERIFIED live 2026-09-26                 #
+# --------------------------------------------------------------------------- #
+# The regional transit agency publishes a standard GTFS zip (keyless, public):
+# routes.txt (81 routes, route_type = mode), stops.txt (6,027 stops, WGS84
+# lat/lon), and much more. We keep routes + stops; the 67k-row trips.txt is
+# skipped for now (a service-frequency view could add it later). route_type is a
+# GTFS-standard enum mapped to a mode label in staging, not here.
+TRIMET_GTFS_URL = "https://developer.trimet.org/schedule/gtfs.zip"
+# table_name -> (zip member, columns to keep). Columns are read as strings and
+# cast/normalized in staging, matching every other topic.
+GTFS_MEMBERS = {
+    "transit_routes": (
+        "routes.txt",
+        ["route_id", "route_short_name", "route_long_name", "route_type", "route_color"],
+    ),
+    "transit_stops": (
+        "stops.txt",
+        ["stop_id", "stop_name", "stop_lat", "stop_lon", "location_type"],
+    ),
+}
+
+# --------------------------------------------------------------------------- #
 # Shared fetch tuning                                                          #
 # --------------------------------------------------------------------------- #
 PAGE_SIZE = 2000
@@ -203,3 +225,159 @@ USER_AGENT = {"User-Agent": "Mozilla/5.0 (compatible; groening-data/1.0)"}
 
 # Municipal / clerk / health bulk files are frequently Windows-1252, not UTF-8.
 BULK_ENCODING = "cp1252"
+
+# --------------------------------------------------------------------------- #
+# Source catalog — provenance for the Sources & Methodology page               #
+# --------------------------------------------------------------------------- #
+# One entry per raw table (key == the raw.* table name, which also keys
+# mart_build_metadata's row counts). This is city-specific provenance, so it
+# lives in the one "which city" file: swapping metros re-points these too. The
+# Sources page joins this catalog with the build-provenance mart's row counts.
+#
+# `page`     : views/<page>.py slug the row links to (all == key except bike).
+# `publisher`: the agency that publishes the data.
+# `url`      : the exact endpoint we fetch (the config constant above), so the
+#              page cites where the data literally comes from, not a landing page.
+# `coverage` : temporal/extent coverage (verified 2026-08-11; see comments above).
+# `grain`    : one-line description of a row + the key raw->mart transform.
+# `license`  : accurate for U.S. federal works (public domain); municipal/state
+#              entries use descriptive attribution — TIGHTEN before public use.
+SOURCES = {
+    "building_permits": {
+        "title": "Building Permits", "page": "building_permits",
+        "publisher": "City of Portland — PortlandMaps Open Data",
+        "url": PERMITS_LAYER_URL, "coverage": "~1995 – present",
+        "grain": "One row per residential permit; geocoded to WGS84 points.",
+        "license": "City of Portland open data",
+    },
+    "parks": {
+        "title": "Parks", "page": "parks",
+        "publisher": "Portland Parks & Recreation — PortlandMaps",
+        "url": PARKS_LAYER_URL, "coverage": "Current inventory",
+        "grain": "One row per park; boundary polygon reduced to a centroid.",
+        "license": "City of Portland open data",
+    },
+    "trees": {
+        "title": "Trees", "page": "trees",
+        "publisher": "Portland Parks & Recreation — PortlandMaps",
+        "url": TREES_LAYER_URL, "coverage": "Current inventory",
+        "grain": "One row per inventoried street/park tree (taxonomy + benefits).",
+        "license": "City of Portland open data",
+    },
+    "crime": {
+        "title": "Reported Crime", "page": "crime",
+        "publisher": "Portland Police Bureau — PortlandMaps",
+        "url": CRIME_MAPSERVER, "coverage": "Rolling trailing 12 months",
+        "grain": "One row per reported offense; three crime-against layers unioned.",
+        "license": "City of Portland open data",
+    },
+    "short_term_rentals": {
+        "title": "Short-Term Rentals", "page": "short_term_rentals",
+        "publisher": "City of Portland — PortlandMaps report API",
+        "url": STR_REPORT_URL, "coverage": "Current registry",
+        "grain": "One row per ASTR permit; Web Mercator coords reprojected to WGS84.",
+        "license": "City of Portland open data",
+    },
+    "bike_network": {
+        "title": "Bike Network", "page": "bike",
+        "publisher": "Portland Bureau of Transportation — PortlandMaps",
+        "url": BIKE_NETWORK_URL, "coverage": "Segments with a recorded build year",
+        "grain": "One row per bikeway segment; aggregated to miles built per year.",
+        "license": "City of Portland open data",
+    },
+    "ugb": {
+        "title": "Urban Growth Boundary", "page": "ugb",
+        "publisher": "Metro (regional government)",
+        "url": UGB_URL, "coverage": "Current boundary (no amendment history)",
+        "grain": "Single dissolved polygon; area + outer ring for the map.",
+        "license": "Metro RLIS open data",
+    },
+    "air_quality": {
+        "title": "Air Quality", "page": "air_quality",
+        "publisher": "U.S. EPA — Air Quality System (AQS)",
+        "url": "https://aqs.epa.gov/aqsweb/airdata/", "coverage": "2019 – 2024",
+        "grain": "One row per site-day; PM2.5 + Ozone, tri-county filtered.",
+        "license": "U.S. public domain",
+    },
+    "weather": {
+        "title": "Rain & Records", "page": "weather",
+        "publisher": "NOAA — GHCN-Daily (station USW00024229, PDX)",
+        "url": WEATHER_URL, "coverage": "1938 – present",
+        "grain": "One row per day at PDX; units normalized to °F / inches.",
+        "license": "U.S. public domain",
+    },
+    "willamette": {
+        "title": "Willamette River", "page": "willamette",
+        "publisher": "U.S. Geological Survey — NWIS (site 14211720)",
+        "url": "https://waterservices.usgs.gov/nwis/dv/", "coverage": "1972 – present",
+        "grain": "One row per day; mean discharge (cfs) with a provisional flag.",
+        "license": "U.S. public domain",
+    },
+    "tourism": {
+        "title": "Air Travel", "page": "tourism",
+        "publisher": "U.S. Bureau of Transportation Statistics (BTS)",
+        "url": "https://data.transportation.gov/resource/xgub-n9bw",
+        "coverage": "1990 – 2025", "grain": "One row per month; PDX international passengers.",
+        "license": "U.S. public domain",
+    },
+    "marriage": {
+        "title": "Marriages", "page": "marriage",
+        "publisher": "Oregon Health Authority — vital statistics",
+        "url": MARRIAGE_XLSX_URL, "coverage": "1995 – present",
+        "grain": "One row per year (Multnomah); aggregate counts + same-sex breakout.",
+        "license": "Oregon OHA public statistics",
+    },
+    "restaurant_inspections": {
+        "title": "Restaurant Inspections", "page": "restaurant_inspections",
+        "publisher": "Multnomah County Environmental Health (MyHealthDepartment)",
+        "url": INSPECTIONS_URL, "coverage": "Rolling ~6 months",
+        "grain": "One row per inspection; 0–100 sanitation score (no coordinates).",
+        "license": "Multnomah County public records",
+    },
+    "transit_routes": {
+        "title": "Transit — Routes", "page": "transit",
+        "publisher": "TriMet — GTFS static feed",
+        "url": TRIMET_GTFS_URL, "coverage": "Current published schedule",
+        "grain": "One row per route; GTFS route_type mapped to a mode label.",
+        "license": "TriMet open data (GTFS)",
+    },
+    "transit_stops": {
+        "title": "Transit — Stops", "page": "transit",
+        "publisher": "TriMet — GTFS static feed",
+        "url": TRIMET_GTFS_URL, "coverage": "Current published schedule",
+        "grain": "One row per stop; WGS84 lat/lon for the map.",
+        "license": "TriMet open data (GTFS)",
+    },
+}
+
+
+# Topics from the Elvis blueprint that Portland does not publish as a clean,
+# machine-readable open feed (verified 2026-08-11). build_warehouse logs these at
+# build time; the Sources page lists them so a dropped topic never reads as "done".
+DROPPED_TOPICS = {
+    "fire_inspections": "Portland Fire & Rescue publishes only station/district "
+    "polygons — no inspection or incident records feed.",
+    "business_licenses": "Portland's business license is a Revenue tax, not an open "
+    "registry; the legacy CivicApps dataset is decommissioned.",
+    "public_art": "Only a 42-point unofficial downtown scrape (~2012) exists; RACC "
+    "publishes no machine-readable geo feed of its full collection.",
+}
+
+
+def source_catalog_rows(row_counts: dict[str, int]) -> list[dict]:
+    """Merge the SOURCES catalog with a table_name -> row_count mapping.
+
+    Returns one display dict per catalogued source, in catalog order, with the
+    row count attached. Raises if a counted table has no catalog entry — that
+    means a new raw source shipped undocumented, which should surface loudly
+    rather than silently miss the Sources page.
+    """
+    undocumented = set(row_counts) - set(SOURCES)
+    if undocumented:
+        raise KeyError(
+            f"raw tables missing from SOURCES catalog: {sorted(undocumented)}"
+        )
+    return [
+        {**meta, "table": table, "row_count": row_counts.get(table)}
+        for table, meta in SOURCES.items()
+    ]

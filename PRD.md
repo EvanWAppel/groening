@@ -173,3 +173,67 @@ page list:
 - **Scope** = mirror Elvis where data exists.
 - **Framing** = broad Data / Data-Engineering portfolio piece.
 - **Codename** = `groening` (bikeable).
+
+---
+
+## 12. Phase 2 — portfolio enhancements (backlog)
+
+The v1 goal (a working, deployed, tested explorer) is met. This phase sharpens the
+piece **for a Data/DE reviewer**. The theme: the strongest engineering claims —
+parameterized ELT, medallion modeling, data-quality tests, one-template-per-city —
+currently live in the README and the code but are **invisible in the running app**.
+Phase 2 makes them visible, then leans into the multi-city template that is the
+durable differentiator. Items are proposed, not committed; each with a real
+trade-off gets a `DECISIONS.md` entry before it's built.
+
+### 12.1 Prove the pipeline (highest signal, mostly leverages existing work)
+
+- **E1 — Sources & Methodology page.** One in-app table: each dataset → source URL,
+  publisher, license, coverage window, row count, and the raw→staging→mart
+  transform applied. Includes the **dropped** topics and why (licenses, public art,
+  fire, 311) — provenance and honesty are the point. Most of this data already
+  exists in `city_config.py`, `sources.yml`, and the drop logs.
+- **E2 — Data-freshness / build-provenance banner.** Stamp the build timestamp,
+  source count, and total row count into a metadata table during
+  `build_warehouse.py`; surface "Data as of \<date\>" globally. Turns the
+  baked-at-build-time constraint into a visible feature.
+- **E3 — dbt lineage, exposed.** Declare each Streamlit page as a **dbt exposure**
+  so lineage is source→staging→mart→page-complete, then surface it: link the
+  static `dbt docs` DAG, or render lineage from `manifest.json` on an "Under the
+  hood" page. Backs up the medallion claim visually.
+- **E4 — Data-quality summary in-app.** Read `run_results.json` after `dbt build`
+  and show a passing-test count (not_null / unique / accepted_values). The tests
+  already run; this proves it to a reviewer who never opens the repo.
+
+### 12.2 Lean into the multi-city template (the differentiator)
+
+- **E5 — Cross-city comparison.** DuckDB `ATTACH` (read-only) of the Portland,
+  Vegas (Elvis), and Seattle (Robbins) warehouses, comparing shared marts (weather,
+  air quality, permits). Proves the marts are genuinely parameter-compatible across
+  cities — the honest demonstration of the template claim. May be a page here or a
+  small standalone "trilogy" app. **Trade-off to log:** where the comparison lives,
+  and how the three `.duckdb` artifacts are co-located at build/deploy time.
+- **E6 — Extract the shared engine.** Factor the common fetch helpers + app
+  scaffolding out of Elvis/Robbins/Groening into a pip-installable package that all
+  three depend on, with `city_config.py` as the only per-city surface. Highest
+  effort (touches three repos). **Lighter alternative to consider first:** a
+  documented `make new-city` scaffold + a "target a new metro" guide that makes the
+  one-file-swap claim runnable. **Decision required** before starting: full package
+  vs. scaffold-and-guide.
+
+### 12.3 Portland-specific data expansion (breadth)
+
+- **E7 — New standout datasets** Vegas lacked, each one fetch→mart→page: **TriMet
+  GTFS** (transit), **311 / PDX service requests**, **tree-canopy change over
+  time**, or **housing/eviction** data. (Note: row-level 311 was HELD in v1 —
+  sensitive campsite-complaint data; pick a non-sensitive feed or aggregate.)
+
+### 12.4 Ambitious / optional
+
+- **E8 — Serving layer.** Expose the marts as a small read-only JSON API (FastAPI
+  over the same DuckDB). Shows a data *product*, not just a dashboard.
+- **E9 — Natural-language query over the marts** (text-to-SQL). **BLOCKED on the
+  personal-key guardrail:** a public deploy backed by an LLM must use a dedicated
+  isolated workspace + a scoped, spend-capped key — never Evan's personal/default
+  Anthropic key. Do not wire this until that checklist (see global `CLAUDE.md`) is
+  satisfied and Evan confirms. Tracked in `BLOCKED.md`.

@@ -1,4 +1,4 @@
-"""A browsable field guide to thirteen Portland public datasets."""
+"""A browsable field guide to fourteen Portland public datasets."""
 
 from base64 import b64encode
 from html import escape
@@ -22,7 +22,7 @@ st.html(f'''<section class="hero">
     <span>SCHEMATIC / NOT TO SCALE</span></figcaption></figure>
     </section>
     <div class="index-strip"><span><span class="status-dot"></span>PUBLIC DATA, SHARED KNOWLEDGE</span>
-    <span><b>13</b> DATASETS &nbsp; / &nbsp; <b>01</b> CITY</span>
+    <span><b>14</b> DATASETS &nbsp; / &nbsp; <b>01</b> CITY</span>
     <span class="strip-territory">PORTLAND &amp; THE METRO REGION</span></div>''')
 
 # --- Headline numbers, one query per topic (cached by app_db.query) ---
@@ -54,6 +54,7 @@ marriage = query(
     "where not preliminary order by year desc limit 1"
 )
 ugb = query("select area_sqmi from main.mart_ugb")
+transit = query("select total_routes, total_stops from main.mart_transit_summary")
 
 # --- Topic tiles: (page, icon, title, headline value, sub-caption) ---
 tiles = [
@@ -148,6 +149,13 @@ tiles = [
         f"{ugb['area_sqmi'][0]:,.0f} mi²",
         "inside Metro's growth boundary",
     ),
+    (
+        "views/transit.py",
+        "🚆",
+        "Transit",
+        f"{int(transit['total_stops'][0]):,}",
+        f"boardable stops on {int(transit['total_routes'][0])} routes",
+    ),
 ]
 
 
@@ -168,7 +176,7 @@ visible = [
     if (category in (None, "All datasets") or TOPICS[Path(tile[0]).stem][1] == category)
     and term.strip().casefold() in (tile[2] + " " + tile[4]).casefold()
 ]
-st.caption(f"{len(visible):02d} / 13 datasets · Select a field to explore its charts, records, and sources.")
+st.caption(f"{len(visible):02d} / 14 datasets · Select a field to explore its charts, records, and sources.")
 if not visible:
     st.info("No datasets match. Try another search or choose All datasets.")
 

@@ -63,16 +63,9 @@ PAGE_SIZE = cfg.PAGE_SIZE
 # Refresh it from a machine that can reach the API (see _dump_inspections_snapshot).
 INSPECTIONS_SNAPSHOT = Path(__file__).parent / "data" / "restaurant_inspections_raw.parquet"
 
-# Topics from the Elvis blueprint that Portland does not publish as a clean,
-# machine-readable open feed (verified 2026-08-11). Surfaced at build time.
-DROPPED_TOPICS = {
-    "fire_inspections": "Portland Fire & Rescue publishes only station/district "
-    "polygons — no inspection or incident records feed.",
-    "business_licenses": "Portland's business license is a Revenue tax, not an open "
-    "registry; the legacy CivicApps dataset is decommissioned.",
-    "public_art": "Only a 42-point unofficial downtown scrape (~2012) exists; RACC "
-    "publishes no machine-readable geo feed of its full collection.",
-}
+# Topics Portland does not publish as a clean, machine-readable open feed live in
+# city_config (city-specific data); build_warehouse just logs them at build time.
+DROPPED_TOPICS = cfg.DROPPED_TOPICS
 
 
 # --------------------------------------------------------------------------- #
@@ -261,9 +254,27 @@ def _epoch_to_date(ms) -> str | None:
 
 
 def _urlopen(url: str, headers: dict | None = None, timeout: int = 300):
-    return urllib.request.urlopen(
-        urllib.request.Request(url, headers=headers or {}), timeout=timeout
-    )
+    """Open a GET, retrying transient upstream HTTP errors up to four attempts.
+
+    Keep the original error if retries run out. Other HTTP errors and TLS/network
+    failures propagate immediately; an outage must never become missing data.
+    Response-body reads remain the caller's responsibility.
+    """
+    for attempt in range(4):
+        try:
+            return urllib.request.urlopen(
+                urllib.request.Request(url, headers=headers or {}), timeout=timeout
+            )
+        except urllib.error.HTTPError as exc:
+            if exc.code not in {500, 502, 503, 504} or attempt == 3:
+                raise
+            delay = 5 * 2**attempt
+            log.warning(
+                "GET %s returned HTTP %d (attempt %d/4); retrying in %ds",
+                urllib.parse.urlsplit(url).hostname, exc.code, attempt + 1, delay,
+            )
+            exc.close()
+            time.sleep(delay)
 
 
 def _webmerc_to_wgs84(x: float, y: float) -> tuple[float, float]:
@@ -412,6 +423,43 @@ def _collect_window(post, path: str, ws: str, we: str) -> list[dict]:
 # --------------------------------------------------------------------------- #
 # Warehouse materialization                                                    #
 # --------------------------------------------------------------------------- #
+def collect_build_metadata(
+    row_counts: dict[str, int], built_at: datetime.datetime
+) -> pd.DataFrame:
+    """One provenance row per loaded raw table (name, row count), stamped with the
+    build time. dbt aggregates this into the app's "Data as of <date> · N sources ·
+    M rows" banner and drives the per-source Sources & Methodology page. Sorted by
+    table name so a rebuild with identical data produces identical rows.
+    """
+    built = built_at.isoformat()
+    return pd.DataFrame(
+        [
+            {"table_name": table, "row_count": int(count), "built_at": built}
+            for table, count in sorted(row_counts.items())
+        ]
+    )
+
+
+def _raw_row_counts(con: duckdb.DuckDBPyConnection) -> dict[str, int]:
+    """Row count of every table currently in the ``raw`` schema.
+
+    Read straight from the warehouse after all topic fetches land, so the counts
+    are exactly what dbt will model — no threading totals through each fetch call.
+    Run before ``raw.build_metadata`` is written so it doesn't count itself.
+    """
+    tables = con.execute(
+        "select table_name from information_schema.tables where table_schema = 'raw' "
+        "order by table_name"
+    ).fetchall()
+    counts: dict[str, int] = {}
+    for (name,) in tables:
+        row = con.execute(f"select count(*) from raw.{name}").fetchone()
+        if row is None:  # a count(*) always returns a row; surface the impossible
+            raise RuntimeError(f"row-count query for raw.{name} returned no result")
+        counts[name] = row[0]
+    return counts
+
+
 def load_raw(con: duckdb.DuckDBPyConnection, table: str, df: pd.DataFrame) -> None:
     if df.empty:
         raise ValueError(
@@ -571,6 +619,32 @@ def fetch_bike_network() -> pd.DataFrame:
     """PBOT bicycle network segment attributes (YearBuilt drives the trend)."""
     log.info("Fetching bike_network from %s ...", cfg.BIKE_NETWORK_URL)
     return fetch_layer(cfg.BIKE_NETWORK_URL, geometry=False)
+
+
+def _parse_gtfs(blob: bytes, members: dict[str, tuple[str, list[str]]]) -> dict[str, pd.DataFrame]:
+    """Extract selected columns from named members of a GTFS zip ``blob``.
+
+    Columns are read as strings (GTFS ids can be zero-padded and must not be
+    coerced to ints) and returned in the requested order; staging casts the
+    numeric ones. ``utf-8-sig`` drops the BOM real feeds put on the header row.
+    """
+    zf = zipfile.ZipFile(io.BytesIO(blob))
+    out: dict[str, pd.DataFrame] = {}
+    for table, (member, cols) in members.items():
+        with zf.open(member) as f:
+            df = pd.read_csv(f, usecols=cols, dtype=str, encoding="utf-8-sig")
+        out[table] = df[cols].reset_index(drop=True)
+    return out
+
+
+def fetch_transit() -> dict[str, pd.DataFrame]:
+    """TriMet GTFS static feed — returns one DataFrame per kept member (routes, stops)."""
+    log.info("Fetching transit GTFS from %s ...", cfg.TRIMET_GTFS_URL)
+    with _urlopen(cfg.TRIMET_GTFS_URL, headers=cfg.USER_AGENT) as resp:
+        frames = _parse_gtfs(resp.read(), cfg.GTFS_MEMBERS)
+    for name, df in frames.items():
+        log.info("  %s: %d rows", name, len(df))
+    return frames
 
 
 def fetch_ugb() -> pd.DataFrame:
@@ -842,6 +916,10 @@ def main() -> None:
         log.info("Fetching bike_network (PortlandMaps ArcGIS) ...")
         load_raw(con, "bike_network", fetch_bike_network())
 
+        log.info("Fetching transit (TriMet GTFS) ...")
+        for table, frame in fetch_transit().items():
+            load_raw(con, table, frame)
+
         log.info("Fetching ugb (Metro ArcGIS) ...")
         load_raw(con, "ugb", fetch_ugb())
 
@@ -853,6 +931,18 @@ def main() -> None:
 
         log.info("Fetching restaurant_inspections (Multnomah MyHealthDepartment) ...")
         load_raw(con, "restaurant_inspections", fetch_inspections())
+
+        # Stamp build provenance from the tables that actually landed, so the app
+        # can show "Data as of <date>" from a mart rather than guessing.
+        built_at = datetime.datetime.now(tz=datetime.UTC)
+        meta = collect_build_metadata(_raw_row_counts(con), built_at)
+        load_raw(con, "build_metadata", meta)
+        log.info(
+            "Build provenance: %d sources, %d total rows, built %s",
+            len(meta),
+            int(meta["row_count"].sum()),
+            built_at.isoformat(),
+        )
     finally:
         con.close()
 
