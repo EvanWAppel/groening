@@ -139,3 +139,33 @@ models:
       - name: total_routes
         tests:
           - not_null
+
+  - name: mart_housing_by_year
+    description: One row per completion year of regulated affordable housing.
+    columns:
+      - name: year
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_housing_by_type
+    description: One row per building type.
+    columns:
+      - name: building_type
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_housing_summary
+    description: Single-row affordable-housing headline summary.
+    columns:
+      - name: total_projects
+        tests:
+          - not_null
+
+  - name: mart_housing_map
+    description: One row per regulated affordable-housing project (WGS84).
+    columns:
+      - name: latitude
+        tests:
+          - not_null
