@@ -27,7 +27,7 @@ with st.sidebar:
                 st.page_link(f"views/{slug}.py", label=title)
     st.html('<div class="nav-section">Reference</div>')
     st.page_link("views/sources.py", label="Sources & Methodology")
-    st.html('<div class="sidebar-colophon"><b>One city. Fifteen perspectives.</b><br>'
+    st.html('<div class="sidebar-colophon"><b>One city. Sixteen perspectives.</b><br>'
             'A collection of public records<br>for the endlessly curious.</div>')
 
 masthead()

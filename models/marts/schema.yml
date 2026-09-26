@@ -169,3 +169,34 @@ models:
       - name: latitude
         tests:
           - not_null
+
+  - name: mart_heritage_by_year
+    description: One row per year of heritage-tree designations.
+    columns:
+      - name: year
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_heritage_by_species
+    description: One row per heritage-tree species.
+    columns:
+      - name: common_name
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_heritage_summary
+    description: Single-row heritage-tree headline summary.
+    columns:
+      - name: total_trees
+        tests:
+          - not_null
+
+  - name: mart_heritage_map
+    description: One row per active heritage tree (WGS84). TREEID is unreliable
+      (nulls + duplicates upstream), so the map is keyed on coordinates, not id.
+    columns:
+      - name: latitude
+        tests:
+          - not_null

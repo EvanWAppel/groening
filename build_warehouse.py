@@ -627,6 +627,12 @@ def fetch_bike_network() -> pd.DataFrame:
     return fetch_layer(cfg.BIKE_NETWORK_URL, geometry=False)
 
 
+def fetch_heritage_trees() -> pd.DataFrame:
+    """City-designated heritage (landmark) trees, WGS84 points."""
+    log.info("Fetching heritage_trees from %s ...", cfg.HERITAGE_TREES_URL)
+    return fetch_layer(cfg.HERITAGE_TREES_URL, geometry=True)
+
+
 def _parse_gtfs(blob: bytes, members: dict[str, tuple[str, list[str]]]) -> dict[str, pd.DataFrame]:
     """Extract selected columns from named members of a GTFS zip ``blob``.
 
@@ -921,6 +927,9 @@ def main() -> None:
 
         log.info("Fetching trees (PortlandMaps ArcGIS) ...")
         load_raw(con, "trees", fetch_trees())
+
+        log.info("Fetching heritage_trees (PortlandMaps ArcGIS) ...")
+        load_raw(con, "heritage_trees", fetch_heritage_trees())
 
         log.info("Fetching bike_network (PortlandMaps ArcGIS) ...")
         load_raw(con, "bike_network", fetch_bike_network())

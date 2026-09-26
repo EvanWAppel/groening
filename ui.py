@@ -26,6 +26,7 @@ TOPICS = {
     "ugb": ("Urban Growth Boundary", "The built city", "13"),
     "transit": ("Transit", "The built city", "14"),
     "housing": ("Affordable Housing", "The built city", "15"),
+    "heritage_trees": ("Heritage Trees", "The natural city", "16"),
 }
 
 

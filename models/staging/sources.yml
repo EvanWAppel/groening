@@ -69,6 +69,12 @@ sources:
           inspection type/purpose/date, and a 0-100 sanitation score for food
           restaurants and carts. Pools/spas arrive in the same feed and are
           filtered to the Food program in staging.
+      - name: heritage_trees
+        description: >
+          PortlandMaps "Heritage Trees" (COP Environment MapServer layer 26):
+          ~463 individually City-designated landmark trees with species, size
+          (height/diameter/circumference), designation year, neighborhood, native
+          flag, and a delist date. Staging keeps active (non-delisted) trees.
       - name: housing
         description: >
           Portland Housing Bureau "Rental Portfolio" (COP Planning & Development

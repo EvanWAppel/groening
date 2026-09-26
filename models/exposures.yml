@@ -28,6 +28,7 @@ exposures:
       - ref('mart_ugb')
       - ref('mart_transit_summary')
       - ref('mart_housing_summary')
+      - ref('mart_heritage_summary')
 
   - name: building_permits_page
     label: "Page: Building Permits"
@@ -199,6 +200,19 @@ exposures:
       - ref('mart_housing_by_year')
       - ref('mart_housing_by_type')
       - ref('mart_housing_map')
+
+  - name: heritage_trees_page
+    label: "Page: Heritage Trees"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/heritage_trees
+    description: Designated heritage trees — designations by year, top species, and a map.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_heritage_summary')
+      - ref('mart_heritage_by_year')
+      - ref('mart_heritage_by_species')
+      - ref('mart_heritage_map')
 
   - name: sources_page
     label: "Page: Sources & Methodology"
