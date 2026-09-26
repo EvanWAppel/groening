@@ -64,6 +64,12 @@ PARKS_LAYER_URL = f"{COP_ENVIRONMENT}/35"
 # metrics (carbon storage/sequestration, stormwater, pollution removal). WGS84.
 TREES_LAYER_URL = f"{COP_ENVIRONMENT}/220"
 
+# Layer 26 = "Heritage Trees", ~463 points: individually City-designated,
+# protected landmark trees (a distinct program from the bulk inventory above).
+# Species (COMMON/SCIENTIFIC), size (HEIGHT/DIAMETER/CIRCUMF), YEAR_Designated,
+# Ownership, Neighborhood, Native, and a Delist_Date for removed designations.
+HERITAGE_TREES_URL = f"{COP_ENVIRONMENT}/26"
+
 # --------------------------------------------------------------------------- #
 # EPA AQS — keyless bulk daily files, filtered by state/county FIPS            #
 # --------------------------------------------------------------------------- #
@@ -363,6 +369,13 @@ SOURCES = {
         "publisher": "Portland Housing Bureau — PortlandMaps",
         "url": HOUSING_LAYER_URL, "coverage": "Regulated portfolio to date",
         "grain": "One row per regulated affordable-housing project (WGS84 point).",
+        "license": "City of Portland open data",
+    },
+    "heritage_trees": {
+        "title": "Heritage Trees", "page": "heritage_trees",
+        "publisher": "Portland Parks & Recreation (Urban Forestry) — PortlandMaps",
+        "url": HERITAGE_TREES_URL, "coverage": "Designated 1973 – present",
+        "grain": "One row per designated heritage tree; active (non-delisted) only in staging.",
         "license": "City of Portland open data",
     },
 }
