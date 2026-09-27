@@ -194,8 +194,9 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
   fallback; fail-fast on the first 403 would cut that).
 - [x] **DEPLOY-05** — `README.md` written (152 lines): what Groening is, the ELT +
   dbt + Streamlit story, local run steps, and the source list.
-- [ ] **DEPLOY-06** *(optional, interview #7)* — Register in the portfolio
-  orchestrator manifest and wire `groening.evanappel.me`.
+- [~] **DEPLOY-06** *(optional, interview #7)* — DEFERRED (decision 2026-09-27).
+  Keep the Railway `*.up.railway.app` URL for now; revisit `groening.evanappel.me`
+  alongside broader portfolio-orchestrator work.
 
 ---
 
@@ -247,16 +248,15 @@ Groups PROVE items are largely independent (different files) — fan out safely.
 
 ### Group MULTI — Multi-city template (the differentiator)
 
-- [ ] **E5 — Cross-city comparison.** `ATTACH` (read-only) Portland + Vegas
-  (Elvis) + Seattle (Robbins) `.duckdb` files; compare shared marts (weather, air
-  quality, permits). **DECISION first:** where it lives (a Groening page vs. a
-  standalone "trilogy" app) and how the three artifacts are co-located at
-  build/deploy. TDD the cross-city query/normalize helpers.
-- [ ] **E6 — Extract the shared engine.** **DECISION first:** full pip-installable
-  package (all three repos depend on it, `city_config.py` the only per-city surface)
-  vs. the lighter `make new-city` scaffold + "target a new metro" guide. Start with
-  the scaffold+guide unless Evan opts into the package. Touches multiple repos —
-  own git worktree per repo, merge one at a time (per ROCRLL Orchestrate).
+- [~] **E5 — Cross-city comparison.** DEFERRED (decision 2026-09-27, see
+  `DECISIONS.md`). Neither the in-Groening page nor a standalone "trilogy" app now;
+  both need three warehouse artifacts co-located at build/deploy for a non-core
+  feature. Revisit if the trilogy story becomes the headline.
+- [ ] **E6 — Extract the shared engine.** DECIDED (2026-09-27): **scaffold + guide**,
+  NOT a pip package — a `make new-city` scaffold + "target a new metro" guide, with
+  `city_config.py` as the per-city surface. Rejected the package (cross-repo
+  versioning surface across Elvis/Groening/Robbins for apps that already work as
+  independent ports). Ready to build when picked up.
 
 ### Group DATA — Portland-specific expansion (breadth)
 
@@ -272,8 +272,10 @@ feed is live and machine-readable before wiring; `log()` and drop if not.
   `SOURCES` (2 entries → transit page), and a `transit_page` dbt exposure. Full
   dbt build green (34 models, 31 tests); 72 pytest · ruff · ty clean; pages execute
   in bare mode. Skipped trips.txt (67k rows) — a service-frequency view for later.
-- [ ] **E7b — 311 / PDX service requests** — pick a **non-sensitive** feed or an
-  aggregate (row-level campsite complaints stay HELD; ask Evan before using them).
+- [ ] **E7b — 311 / PDX service requests** — DECIDED (2026-09-27): find a
+  **non-sensitive** or aggregate feed and wire it; drop-and-log if none is clean.
+  Row-level campsite (homelessness) complaints are ruled OUT on sensitivity grounds.
+  Ready to start with a source hunt.
 - [~] **E7c — Tree-canopy change over time.** DROPPED + logged
   (`city_config.DROPPED_TOPICS['tree_canopy']`): Portland's Urban Forestry canopy
   assessment ships as raster/land-cover snapshots, not a tabular canopy-over-time
