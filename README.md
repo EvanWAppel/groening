@@ -104,6 +104,29 @@ uv run dbt build --profiles-dir .           # build staging views + mart tables
 uv run streamlit run streamlit_app.py       # serve on :8501
 ```
 
+## JSON API (read-only)
+
+`api.py` is a small FastAPI app that serves the dbt-built marts as JSON — the same
+warehouse, exposed as a data *product* alongside the dashboard. It is read-only by
+construction: the DuckDB file is opened `read_only=True`, callers can only read whole
+marts (there is no arbitrary-SQL endpoint), and only `main.mart_*` base tables are
+reachable — the `raw.*` tables and `stg_*` views are never served.
+
+```bash
+uv run uvicorn api:app --reload        # serve on :8000
+```
+
+| Endpoint | Returns |
+| --- | --- |
+| `GET /health` | `{"status": "ok", "marts": <count>}` |
+| `GET /marts` | every mart name with its row count |
+| `GET /marts/{name}?limit=100&offset=0` | rows as JSON (`limit` 1–10000, paged) |
+| `GET /marts/{name}/schema` | ordered columns with DuckDB types |
+
+An unknown, hidden, or crafted name is a 404, so the name is never trusted into SQL.
+The API is **not** part of the Railway deploy yet (that stays single-Streamlit); the
+module ships now, deploy wiring is a later decision (see `DECISIONS.md`).
+
 ## Deploy
 
 Railway builds from the `Dockerfile`, which runs `build_warehouse.py && dbt build`
