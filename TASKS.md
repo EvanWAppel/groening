@@ -96,31 +96,33 @@ high-confidence source: **Building Permits** or **Parks** (PortlandMaps) or
 
 ## Group CONFIG — City configuration
 
-- [ ] **CONFIG-01** — Verify and record in `city_config.py` the **PortlandMaps**
-  (City of Portland) ArcGIS org / services root and the layer paths for the topics
-  you keep.
-- [ ] **CONFIG-02** — Verify and record the **Metro RLIS** regional GIS root (if
-  used for metro-wide layers).
-- [ ] **CONFIG-03** — Record **EPA AQS** FIPS: OR state `41`, Multnomah `051` (add
-  Washington `067`, Clackamas `005` if metro breadth = full metro).
-- [ ] **CONFIG-04** — Record **NOAA GHCN-Daily** station: PDX `USW00024229`.
-- [ ] **CONFIG-05** — Record the **Portland Police Bureau** crime data endpoint and
-  its format (ArcGIS vs. CSV) + available years.
-- [ ] **CONFIG-06** — Record the chosen **signature water body** source (USGS NWIS
-  site id for the Willamette gauge, or USACE reservoir feed).
+_All CONFIG values were verified and landed in `city_config.py` during Group VS and
+Group TOPIC (each source confirmed live before wiring). Checked off retroactively._
+
+- [x] **CONFIG-01** — PortlandMaps ArcGIS org / services roots + kept-topic layer
+  paths recorded in `city_config.py`.
+- [x] **CONFIG-02** — Metro RLIS regional root recorded (UGB / neighborhoods layers).
+- [x] **CONFIG-03** — EPA AQS FIPS recorded: OR `41` + tri-county `051`/`067`/`005`.
+- [x] **CONFIG-04** — NOAA GHCN-Daily station recorded: PDX `USW00024229`.
+- [x] **CONFIG-05** — PPB crime endpoint + format + year range recorded (TOPIC-crime).
+- [x] **CONFIG-06** — Signature water body recorded: USGS NWIS Willamette site
+  `14211720` (discharge `00060`).
 
 ---
 
 ## Group ETL — Ingestion hardening
 
-- [ ] **ETL-01** — Confirm the **force-IPv4 for `aqs.epa.gov`** path is carried over
-  (see `PRIMER.md` §4). Test that the AQS fetch completes in the target env.
-- [ ] **ETL-02** — Confirm the `ssl_verify=False` path exists and is used **only**
-  per-host for broken-TLS servers, and logs a warning when engaged.
-- [ ] **ETL-03** — Centralize encoding handling (Windows-1252 / cp1252) for muni/
-  clerk/health bulk files in `_read_delimited`. TDD with a fixture file.
-- [ ] **ETL-04** — Ensure every fetch logs source, URL, and row count; a fetch that
-  returns zero rows raises (don't silently ship an empty page).
+_All ETL hardening shipped alongside the topics that needed it (air quality, muni
+bulk files). Checked off retroactively._
+
+- [x] **ETL-01** — Force-IPv4 for `aqs.epa.gov` carried over; AQS fetch completes on
+  Railway (see TOPIC-air).
+- [x] **ETL-02** — Per-host `ssl_verify=False` path exists, used only for the
+  offending host, and logs a warning when engaged.
+- [x] **ETL-03** — Windows-1252 / cp1252 encoding handling centralized for muni bulk
+  files (TDD'd).
+- [x] **ETL-04** — Every fetch logs source/URL/row count; a zero-row fetch raises
+  (VS-05).
 
 ---
 
@@ -177,10 +179,11 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
 
 ## Group DEPLOY — Ship & document
 
-- [ ] **DEPLOY-01** — `.gitignore` the build artifacts: `*.duckdb`, `target/`,
-  `logs/`, `.venv/`, `.env`, `.DS_Store`, `__pycache__/`.
-- [ ] **DEPLOY-02** — Configure `prek` (ruff + ty) pre-commit; `uv run prek
-  install`; confirm hooks fire.
+- [x] **DEPLOY-01** — `.gitignore` covers the build artifacts: `*.duckdb`
+  (+ `.duckdb.wal`), `target/`, `logs/`, `.venv/`, `__pycache__/`.
+- [x] **DEPLOY-02** — Configured `prek` pre-commit (`.pre-commit-config.yaml`): ruff
+  + ty + a pytest regression hook (`uv run python -m pytest`, since the bare `pytest`
+  script isn't in the venv). `uv run prek install`; `prek run --all-files` all green.
 - [x] **DEPLOY-03** — GitHub Actions CI (`.github/workflows/ci.yml`): ruff + ty +
   pytest on every push/PR via `uv`. Status badge in the README. Plus dbt
   data-quality tests (`models/marts/schema.yml`): not_null/unique/accepted_values
@@ -189,8 +192,8 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
   builds (dbt PASS=42) and the app serves. Build ~13 min end to end (the bulk is
   source fetches plus ~3 min of inspections 403 retries before the snapshot
   fallback; fail-fast on the first 403 would cut that).
-- [ ] **DEPLOY-05** — Write `README.md`: what Groening is, the ELT + dbt +
-  Streamlit story (Data/DE framing), local run steps, and the source list.
+- [x] **DEPLOY-05** — `README.md` written (152 lines): what Groening is, the ELT +
+  dbt + Streamlit story, local run steps, and the source list.
 - [ ] **DEPLOY-06** *(optional, interview #7)* — Register in the portfolio
   orchestrator manifest and wire `groening.evanappel.me`.
 
