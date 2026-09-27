@@ -31,3 +31,15 @@ The durable *why*. One entry per decision with a **real trade-off** — what was
 **Rejected:** (a) eviction data — no clean, current, machine-readable Portland/Multnomah eviction feed found; (b) Residential Demolition Permits (layer 126, ~6,530 rows) — verified live and richer, but structurally a near-duplicate of the existing Building Permits page (issue date, valuation, units, neighborhood, hexbin), so it adds volume more than a new perspective.
 
 **Why:** the affordable-housing portfolio is a genuinely distinct lens — regulated vs. total units, affordability, where subsidized housing sits — that no existing page covers, which is the point of E7 (add perspectives Vegas lacked). Demolitions remains a good future "built vs. torn down" companion to permits if breadth is wanted later. Tree-canopy (E7c) was dropped in the same pass: Portland publishes canopy as rasters, not a tabular time series (logged in `city_config.DROPPED_TOPICS`).
+
+---
+
+## 2026-09-26 — E8 JSON serving layer ships as a standalone module, not wired into the deploy
+
+**Chose:** build the read-only JSON API as a standalone `api.py` (FastAPI over the same `portland.duckdb`, opened `read_only=True`), TDD'd via `tests/test_api.py` with a `get_connection` dependency override onto a throwaway DuckDB. Endpoints: `/health`, `/marts` (names + row counts), `/marts/{name}` (rows, `limit`/`offset` paged), `/marts/{name}/schema`. The Dockerfile/Railway deploy is left untouched — it still serves only Streamlit on `$PORT`.
+
+**Rejected:** wiring the API into the live deploy now — either a second Railway service or a process manager running Streamlit + uvicorn behind one port.
+
+**Why:** E8 is the "ambitious/optional" SERVE group; its value is demonstrating a data *product* (the marts as JSON), which the module + tests already deliver. Adding process supervision or a reverse proxy to a currently-single-process image is real deploy risk (port routing, SIGTERM handling, health checks) for no user-facing gain yet, so it's deferred as its own decision. Design guarantees keep it safe to expose later: read-only connection, no arbitrary-SQL endpoint, and only `main.mart_*` base tables reachable (raw tables and staging views 404), with requested names validated against the live catalog before ever touching SQL. `fastapi`/`uvicorn` are in `pyproject.toml` but deliberately NOT in `requirements.txt`, since the Docker image doesn't run the API — adding them there would ship unused runtime deps.
+
+**Review hardening (adopted from the independent adversarial review):** (1) mart discovery is pinned to `current_database()`, not just the `main` schema, so if a second catalog is ever `ATTACH`ed its own `main.mart_*` tables can't leak into the API. (2) rows are serialized via DuckDB's native `fetchall()` + FastAPI's encoder instead of a pandas `to_json` roundtrip — this keeps a nullable-int column an int (pandas coerces it to float, e.g. `2024` → `2024.0`) and makes the endpoint pandas-free. Both were medium/low advisory findings; no high-severity issue was raised.

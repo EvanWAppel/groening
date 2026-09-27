@@ -289,8 +289,20 @@ feed is live and machine-readable before wiring; `log()` and drop if not.
 
 ### Group SERVE — Serving layer & NL query (ambitious / optional)
 
-- [ ] **E8 — Read-only JSON API.** FastAPI (or Streamlit-adjacent) over the same
-  DuckDB exposing the marts as JSON. TDD the endpoints. Keep it read-only.
+- [x] **E8 — Read-only JSON API.** Standalone `api.py` (FastAPI over the same
+  `portland.duckdb`, opened `read_only=True`) exposing the 47 marts as JSON:
+  `/health`, `/marts` (names + row counts), `/marts/{name}` (rows, `limit`/`offset`
+  paged, 1–10000), `/marts/{name}/schema`. Read-only by construction — no
+  arbitrary-SQL endpoint, only `main.mart_*` base tables reachable (raw tables and
+  `stg_*` views 404), requested names validated against the live catalog before
+  touching SQL (mart lookup pinned to `current_database()`, so an ATTACHed second
+  catalog can't leak). Rows serialized via native `fetchall()` (pandas-free path,
+  keeps int columns int). TDD'd: `tests/test_api.py` (17 tests) runs against a
+  throwaway DuckDB via a `get_connection` dependency override; smoke-tested against
+  the real warehouse (47 marts, dates/bools intact). Independently reviewed (no
+  high-severity findings; medium catalog-pinning + low pandas-fidelity findings
+  both adopted). `fastapi`/`uvicorn` added to `pyproject.toml`; deploy left
+  single-Streamlit (deploy wiring deferred — logged in `DECISIONS.md`).
 - [ ] **E9 — Natural-language query (text-to-SQL).** 🔴 **Gated on the
   personal-key guardrail** — needs a dedicated isolated workspace + a scoped,
   spend-capped key, never Evan's personal Anthropic key (see global `CLAUDE.md`).
