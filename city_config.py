@@ -32,6 +32,19 @@ COP_ENVIRONMENT = f"{PORTLANDMAPS_OD}/COP_OpenData_Environment/MapServer"
 # Transportation open-data service (bike network, streets, etc.).
 COP_TRANSPORTATION = f"{PORTLANDMAPS_OD}/COP_OpenData_Transportation/MapServer"
 
+# Boundary open-data service (neighborhoods, districts, etc.).
+COP_BOUNDARY = f"{PORTLANDMAPS_OD}/COP_OpenData_Boundary/MapServer"
+
+# --------------------------------------------------------------------------- #
+# Neighborhood Boundaries — choropleth base layer — VERIFIED live 2026-09-27   #
+# --------------------------------------------------------------------------- #
+# Layer 3 = "Neighborhood Boundaries", 125 polygons. Field NAME holds the
+# neighborhood name. Polygon geometry reprojected to WGS84 via outSR. This is a
+# support layer (not its own topic page): every geocoded point dataset is tagged
+# with its containing neighborhood at build time so the choropleth maps can shade
+# per-neighborhood counts.
+NEIGHBORHOODS_LAYER_URL = f"{COP_BOUNDARY}/3"
+
 # --------------------------------------------------------------------------- #
 # Building Permits (vertical-slice topic) — VERIFIED live 2026-08-11           #
 # --------------------------------------------------------------------------- #

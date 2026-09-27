@@ -1,13 +1,18 @@
 """Shared visual language for the Portland field guide."""
 
+import json
 from html import escape
 from pathlib import Path
 
+import pydeck as pdk
 import streamlit as st
 
 from app_db import query
 
 ASSETS = Path(__file__).parent / "assets"
+
+# Portland metro centering for the neighborhood choropleths.
+_PDX_CENTER = {"longitude": -122.66, "latitude": 45.53, "zoom": 9.6}
 
 # One index keeps the navigation and dataset collection in sync.
 TOPICS = {
@@ -59,6 +64,58 @@ def build_stamp() -> str:
     ).iloc[0]
     built = row["built_at"].strftime("%B %-d, %Y")
     return f"Data as of {built} · {int(row['sources'])} sources · {int(row['rows']):,} rows"
+
+
+def neighborhood_choropleth(df, value_label: str, accent: tuple[int, int, int]) -> None:
+    """Render a Portland neighborhood choropleth from a marts frame.
+
+    ``df`` has one row per neighborhood polygon with ``neighborhood``,
+    ``boundary_json`` (a WGS84 coordinate ring), and ``n`` (the count to shade by).
+    Fill interpolates from a near-white base to ``accent`` on a sqrt scale, so a
+    single dense neighborhood (e.g. downtown) doesn't wash the rest to white.
+    """
+    counts = df["n"].astype(float)
+    peak = max(counts.max(), 1.0)
+    base = (247, 244, 239)  # warm paper, matching the field-guide palette
+    ar, ag, ab = accent
+
+    records = []
+    for row in df.itertuples(index=False):
+        t = (max(row.n, 0) / peak) ** 0.5  # sqrt compresses the long tail
+        fill = [
+            round(base[0] + (ar - base[0]) * t),
+            round(base[1] + (ag - base[1]) * t),
+            round(base[2] + (ab - base[2]) * t),
+            220,
+        ]
+        records.append(
+            {
+                "polygon": json.loads(row.boundary_json),
+                "neighborhood": row.neighborhood,
+                "n": int(row.n),
+                "fill": fill,
+            }
+        )
+
+    layer = pdk.Layer(
+        "PolygonLayer",
+        data=records,
+        get_polygon="polygon",
+        get_fill_color="fill",
+        get_line_color=[255, 255, 255],
+        line_width_min_pixels=0.5,
+        stroked=True,
+        filled=True,
+        pickable=True,
+        auto_highlight=True,
+    )
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[layer],
+            initial_view_state=pdk.ViewState(pitch=0, **_PDX_CENTER),
+            tooltip={"text": "{neighborhood}\n{n} " + value_label},
+        )
+    )
 
 
 def footer() -> None:

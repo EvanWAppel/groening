@@ -99,6 +99,15 @@ sources:
           TriMet GTFS stops.txt (~6,027 stops): stop_id, stop_name, WGS84
           stop_lat/stop_lon, and location_type (0/blank = a boardable stop;
           1 = station, 2 = entrance — filtered out for the map in staging).
+      - name: neighborhoods
+        description: >
+          PortlandMaps "Neighborhood Boundaries" (COP Open Data Boundary MapServer
+          layer 3): 125 neighborhood polygons, one row per polygon with the
+          neighborhood name and its largest (outer) ring as a JSON coordinate
+          array (WGS84). The choropleth base layer — every geocoded point dataset
+          is tagged (point-in-polygon, at build time) with its containing
+          neighborhood via a hood_name column so the *_choropleth marts can shade
+          per-neighborhood counts with a plain GROUP BY.
       - name: build_metadata
         description: >
           Build provenance stamped by build_warehouse.py after every source

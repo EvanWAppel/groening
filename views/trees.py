@@ -1,11 +1,10 @@
 """Portland's inventoried trees — species, size, and the benefits they provide."""
 
 import altair as alt
-import pydeck as pdk
 import streamlit as st
 
 from app_db import query
-from ui import page_header
+from ui import neighborhood_choropleth, page_header
 
 page_header("trees")
 st.caption(
@@ -48,29 +47,8 @@ st.altair_chart(sp_chart, width="stretch")
 
 # --- Map ---
 st.subheader("Where the trees are")
-st.caption("Density of inventoried trees — taller/brighter hexes have more trees.")
-points = query("select longitude, latitude from main.mart_trees_map")
-layer = pdk.Layer(
-    "HexagonLayer",
-    data=points,
-    get_position="[longitude, latitude]",
-    radius=150,
-    elevation_scale=4,
-    elevation_range=[0, 1000],
-    extruded=True,
-    coverage=0.9,
-    pickable=True,
+st.caption("Inventoried trees by neighborhood — darker = more trees.")
+hoods = query(
+    "select neighborhood, boundary_json, n from main.mart_trees_choropleth"
 )
-view_state = pdk.ViewState(
-    longitude=float(points["longitude"].mean()),
-    latitude=float(points["latitude"].mean()),
-    zoom=11,
-    pitch=45,
-)
-st.pydeck_chart(
-    pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        tooltip={"text": "{elevationValue} trees"},
-    )
-)
+neighborhood_choropleth(hoods, value_label="trees", accent=(46, 110, 74))

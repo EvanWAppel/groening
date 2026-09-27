@@ -1,11 +1,10 @@
 """Portland reported crime — PPB open data (rolling 12-month window)."""
 
 import altair as alt
-import pydeck as pdk
 import streamlit as st
 
 from app_db import query
-from ui import page_header
+from ui import neighborhood_choropleth, page_header
 
 page_header("crime")
 st.caption(
@@ -65,30 +64,10 @@ st.altair_chart(
     width="stretch",
 )
 
-# --- Hexbin density map ---
+# --- Choropleth: offenses by neighborhood ---
 st.subheader("Where crime is reported")
-points = query("select longitude, latitude from main.mart_crime_map")
-layer = pdk.Layer(
-    "HexagonLayer",
-    data=points,
-    get_position="[longitude, latitude]",
-    radius=250,
-    elevation_scale=8,
-    elevation_range=[0, 1500],
-    extruded=True,
-    coverage=0.9,
-    pickable=True,
+st.caption("Reported offenses by neighborhood over the trailing 12 months.")
+hoods = query(
+    "select neighborhood, boundary_json, n from main.mart_crime_choropleth"
 )
-view_state = pdk.ViewState(
-    longitude=float(points["longitude"].mean()),
-    latitude=float(points["latitude"].mean()),
-    zoom=10,
-    pitch=45,
-)
-st.pydeck_chart(
-    pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        tooltip={"text": "{elevationValue} offenses"},
-    )
-)
+neighborhood_choropleth(hoods, value_label="offenses", accent=(184, 73, 46))

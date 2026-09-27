@@ -1,11 +1,10 @@
 """Portland's Historic Resource Inventory — surveyed historic buildings and sites."""
 
 import altair as alt
-import pydeck as pdk
 import streamlit as st
 
 from app_db import query
-from ui import page_header
+from ui import neighborhood_choropleth, page_header
 
 page_header("historic")
 st.caption(
@@ -79,30 +78,9 @@ with right:
 
 # --- Map ---
 st.subheader("Where the historic resources are")
-st.caption("Density of surveyed historic resources — taller/brighter hexes have more.")
-points = query("select longitude, latitude from main.mart_historic_map")
-layer = pdk.Layer(
-    "HexagonLayer",
-    data=points,
-    get_position="[longitude, latitude]",
-    radius=150,
-    elevation_scale=4,
-    elevation_range=[0, 1000],
-    extruded=True,
-    coverage=0.9,
-    pickable=True,
+st.caption("Surveyed historic resources by neighborhood — darker = more.")
+hoods = query(
+    "select neighborhood, boundary_json, n from main.mart_historic_choropleth"
 )
-view_state = pdk.ViewState(
-    longitude=float(points["longitude"].mean()),
-    latitude=float(points["latitude"].mean()),
-    zoom=11,
-    pitch=45,
-)
-st.pydeck_chart(
-    pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        tooltip={"text": "{elevationValue} historic resources"},
-    )
-)
+neighborhood_choropleth(hoods, value_label="historic resources", accent=(139, 94, 60))
 st.caption("Source: City of Portland Historic Resource Inventory (PortlandMaps).")

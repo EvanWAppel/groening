@@ -14,6 +14,7 @@ select
     "WORKDESC"                               as work_description,
     "FOLDER_DES"                             as folder_description,
     "NBRHOOD"                                as neighborhood,
+    hood_name,
     "IS_ADU"                                 as is_adu,
     try_cast("VALUATION" as double)          as valuation,
     try_cast("NEW_UNITS" as double)          as new_units,

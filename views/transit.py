@@ -42,32 +42,24 @@ st.altair_chart(mode_chart, width="stretch")
 
 # --- Stops map ---
 st.subheader("Where you can board")
-st.caption("Density of boardable stops — taller/brighter hexes have more stops.")
+st.caption("Every boardable TriMet stop, drawn flat — the shape of the network itself.")
 points = query("select longitude, latitude from main.mart_transit_stops_map")
 layer = pdk.Layer(
-    "HexagonLayer",
+    "ScatterplotLayer",
     data=points,
     get_position="[longitude, latitude]",
-    radius=200,
-    elevation_scale=4,
-    elevation_range=[0, 1000],
-    extruded=True,
-    coverage=0.9,
-    pickable=True,
+    get_fill_color=[46, 110, 74, 140],
+    get_radius=60,
+    radius_min_pixels=1.5,
+    pickable=False,
 )
 view_state = pdk.ViewState(
     longitude=float(points["longitude"].mean()),
     latitude=float(points["latitude"].mean()),
     zoom=10,
-    pitch=45,
+    pitch=0,
 )
-st.pydeck_chart(
-    pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        tooltip={"text": "{elevationValue} stops"},
-    )
-)
+st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state))
 
 # --- Route list ---
 st.subheader("Every route")

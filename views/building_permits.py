@@ -1,11 +1,10 @@
 """Portland residential building permits — volume, valuation, and where they land."""
 
 import altair as alt
-import pydeck as pdk
 import streamlit as st
 
 from app_db import query
-from ui import page_header
+from ui import neighborhood_choropleth, page_header
 
 page_header("building_permits")
 st.caption(
@@ -103,34 +102,8 @@ st.divider()
 
 # --- Where permits land (PyDeck hexbin over the geocoded permits) ---
 st.subheader("Where permits are issued")
-st.caption("Hexbin density of geocoded permits across the city — taller/brighter = more permits.")
-points = query(
-    """
-    select longitude, latitude
-    from main.mart_permits_map
-    """
+st.caption("Geocoded permits by neighborhood — darker = more permits.")
+hoods = query(
+    "select neighborhood, boundary_json, n from main.mart_permits_choropleth"
 )
-layer = pdk.Layer(
-    "HexagonLayer",
-    data=points,
-    get_position="[longitude, latitude]",
-    radius=200,
-    elevation_scale=6,
-    elevation_range=[0, 1200],
-    extruded=True,
-    coverage=0.9,
-    pickable=True,
-)
-view_state = pdk.ViewState(
-    longitude=float(points["longitude"].mean()),
-    latitude=float(points["latitude"].mean()),
-    zoom=10,
-    pitch=45,
-)
-st.pydeck_chart(
-    pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        tooltip={"text": "{elevationValue} permits"},
-    )
-)
+neighborhood_choropleth(hoods, value_label="permits", accent=(38, 92, 129))
