@@ -12,6 +12,7 @@ typed as (
         "CategoryName"               as crime_against,
         "OffenseGroupDescription"    as offense_group,
         "CrimeType"                  as crime_type,
+        hood_name,
         try_cast(longitude as double) as longitude,
         try_cast(latitude as double)  as latitude
     from source
@@ -25,6 +26,7 @@ select
     crime_against,
     offense_group,
     crime_type,
+    hood_name,
     longitude,
     latitude
 from typed

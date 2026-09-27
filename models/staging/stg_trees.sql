@@ -17,6 +17,7 @@ select
     try_cast("Carbon_Storage_lb" as double) as carbon_storage_lb,
     try_cast("Stormwater_ft" as double)    as stormwater_cf,
     try_cast("Total_Annual_Benefits" as double) as annual_benefits_usd,
+    hood_name,
     try_cast(longitude as double)          as longitude,
     try_cast(latitude as double)           as latitude
 from source

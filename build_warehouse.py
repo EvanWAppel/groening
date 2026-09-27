@@ -242,6 +242,74 @@ def _point_in_ring(lon: float, lat: float, ring: list) -> bool:
     return inside
 
 
+def _ring_bbox(ring: list) -> tuple[float, float, float, float]:
+    """(min_lon, min_lat, max_lon, max_lat) bounding box of a polygon ring."""
+    lons = [p[0] for p in ring]
+    lats = [p[1] for p in ring]
+    return (min(lons), min(lats), max(lons), max(lats))
+
+
+def _neighborhood_polygons(hoods_df: pd.DataFrame) -> list[dict]:
+    """Parse the neighborhoods frame into ``{name, ring, bbox}`` records.
+
+    Each row's ``boundary_json`` is a single (outer) ring; empty geometries are
+    skipped. The bbox is precomputed so :func:`assign_neighborhood` can reject
+    the vast majority of point/polygon pairs before the O(n) ray cast.
+    """
+    polys: list[dict] = []
+    for name, boundary_json in zip(hoods_df["name"], hoods_df["boundary_json"]):
+        ring = json.loads(boundary_json)
+        if not ring:
+            continue
+        polys.append({"name": name, "ring": ring, "bbox": _ring_bbox(ring)})
+    return polys
+
+
+def assign_neighborhood(lon, lat, polygons: list[dict]) -> str | None:
+    """Name of the first neighborhood polygon containing (lon, lat), else None.
+
+    Returns None for missing/NaN/uncoercible coordinates. Raw ArcGIS lon/lat often
+    arrive as strings, so coerce to float first. A bbox prefilter skips polygons the
+    point can't possibly fall in, so the ray cast only runs on real candidates.
+    """
+    try:
+        lon = float(lon)
+        lat = float(lat)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(lon) or math.isnan(lat):
+        return None
+    for poly in polygons:
+        min_lon, min_lat, max_lon, max_lat = poly["bbox"]
+        if not (min_lon <= lon <= max_lon and min_lat <= lat <= max_lat):
+            continue
+        if _point_in_ring(lon, lat, poly["ring"]):
+            return poly["name"]
+    return None
+
+
+def tag_neighborhoods(
+    df: pd.DataFrame,
+    polygons: list[dict],
+    lon_col: str = "longitude",
+    lat_col: str = "latitude",
+) -> pd.DataFrame:
+    """Return a copy of ``df`` with a ``hood_name`` column (None where unmatched).
+
+    Point-in-polygon tagging at build time keeps the choropleth marts a plain
+    GROUP BY in dbt — no spatial extension, no runtime geo dependency.
+    """
+    out = df.copy()
+    names = [
+        assign_neighborhood(lon, lat, polygons)
+        for lon, lat in zip(out[lon_col], out[lat_col])
+    ]
+    # Explicit object dtype so unmatched points stay Python None (SQL NULL in
+    # DuckDB), not a coerced NaN that would land as a 'nan' string.
+    out["hood_name"] = pd.Series(names, index=out.index, dtype="object")
+    return out
+
+
 def _epoch_to_date(ms) -> str | None:
     """ArcGIS epoch-millisecond timestamp -> ISO date string (None if missing)."""
     if ms is None or (isinstance(ms, float) and pd.isna(ms)):
@@ -679,6 +747,34 @@ def fetch_ugb() -> pd.DataFrame:
     )
 
 
+def fetch_neighborhoods() -> pd.DataFrame:
+    """Portland neighborhood boundaries (PortlandMaps layer 3) — the choropleth base.
+
+    One row per boundary polygon: the neighborhood NAME and its most-detailed ring
+    (the one with the most vertices — its main part) as a JSON coordinate list,
+    reprojected to WGS84. Multipart neighborhoods keep only that part, and interior
+    "hole" rings are ignored — enough to shade the region and tag the vast majority
+    of points (a point in a discarded smaller part is left untagged, not misfiled).
+    """
+    log.info("Fetching neighborhoods from %s ...", cfg.NEIGHBORHOODS_LAYER_URL)
+    feats = fetch_features(cfg.NEIGHBORHOODS_LAYER_URL, out_sr=4326)
+    if not feats:
+        raise ValueError("neighborhoods: no features returned")
+    rows: list[dict] = []
+    for attrs, geom in feats:
+        rings = (geom or {}).get("rings", [])
+        if not rings:
+            continue
+        outer = max(rings, key=len)  # most-vertex ring = the neighborhood's main part
+        name = (attrs.get("NAME") or "").strip()
+        if not name:
+            continue
+        rows.append({"name": name, "boundary_json": json.dumps(outer)})
+    if not rows:
+        raise ValueError("neighborhoods: no named polygons parsed")
+    return pd.DataFrame(rows)
+
+
 def _marriage_col(sdf: pd.DataFrame, name: str):
     """Case-insensitive column lookup for the OHA marriage sheets."""
     for col in sdf.columns:
@@ -907,8 +1003,16 @@ def _fetch_inspections_live() -> pd.DataFrame:
 def main() -> None:
     con = duckdb.connect(str(DB_PATH))
     try:
+        # Neighborhood polygons first: every geocoded point dataset below is
+        # tagged with its containing neighborhood (point-in-polygon) so the
+        # choropleth marts are a plain GROUP BY in dbt.
+        log.info("Fetching neighborhoods (PortlandMaps ArcGIS) ...")
+        neighborhoods = fetch_neighborhoods()
+        load_raw(con, "neighborhoods", neighborhoods)
+        polygons = _neighborhood_polygons(neighborhoods)
+
         log.info("Fetching building_permits (PortlandMaps ArcGIS) ...")
-        load_raw(con, "building_permits", fetch_building_permits())
+        load_raw(con, "building_permits", tag_neighborhoods(fetch_building_permits(), polygons))
 
         log.info("Fetching parks (PortlandMaps ArcGIS) ...")
         load_raw(con, "parks", fetch_parks())
@@ -917,7 +1021,7 @@ def main() -> None:
         load_raw(con, "housing", fetch_housing())
 
         log.info("Fetching historic (PortlandMaps ArcGIS) ...")
-        load_raw(con, "historic", fetch_historic())
+        load_raw(con, "historic", tag_neighborhoods(fetch_historic(), polygons))
 
         log.info("Fetching weather (NOAA GHCN-Daily, PDX) ...")
         load_raw(con, "weather", fetch_weather())
@@ -929,13 +1033,13 @@ def main() -> None:
         load_raw(con, "short_term_rentals", fetch_str())
 
         log.info("Fetching crime (PortlandMaps ArcGIS) ...")
-        load_raw(con, "crime", fetch_crime())
+        load_raw(con, "crime", tag_neighborhoods(fetch_crime(), polygons))
 
         log.info("Fetching air_quality (EPA AQS bulk, tri-county) ...")
         load_raw(con, "air_quality", fetch_air_quality())
 
         log.info("Fetching trees (PortlandMaps ArcGIS) ...")
-        load_raw(con, "trees", fetch_trees())
+        load_raw(con, "trees", tag_neighborhoods(fetch_trees(), polygons))
 
         log.info("Fetching heritage_trees (PortlandMaps ArcGIS) ...")
         load_raw(con, "heritage_trees", fetch_heritage_trees())

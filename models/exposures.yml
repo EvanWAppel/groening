@@ -36,12 +36,12 @@ exposures:
     type: application
     maturity: high
     url: https://groening-production.up.railway.app/building_permits
-    description: Building-permit KPIs, time series, work-class bars, and a 3D hexbin map.
+    description: Building-permit KPIs, time series, work-class bars, and a per-neighborhood choropleth.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
       - ref('mart_permits_monthly')
       - ref('mart_permits_by_type')
-      - ref('mart_permits_map')
+      - ref('mart_permits_choropleth')
 
   - name: parks_page
     label: "Page: Parks"
@@ -58,12 +58,12 @@ exposures:
     type: application
     maturity: high
     url: https://groening-production.up.railway.app/crime
-    description: Reported crime by type, an hour x weekday heatmap, and a hexbin map.
+    description: Reported crime by type, an hour x weekday heatmap, and a per-neighborhood choropleth.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
       - ref('mart_crime_by_type')
       - ref('mart_crime_by_hour_weekday')
-      - ref('mart_crime_map')
+      - ref('mart_crime_choropleth')
 
   - name: short_term_rentals_page
     label: "Page: Short-Term Rentals"
@@ -127,12 +127,12 @@ exposures:
     type: application
     maturity: high
     url: https://groening-production.up.railway.app/trees
-    description: Street-tree inventory — species mix, benefits summary, and a hexbin map.
+    description: Street-tree inventory — species mix, benefits summary, and a per-neighborhood choropleth.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
       - ref('mart_trees_by_species')
       - ref('mart_trees_summary')
-      - ref('mart_trees_map')
+      - ref('mart_trees_choropleth')
 
   - name: bike_page
     label: "Page: Bike Network"
@@ -220,14 +220,14 @@ exposures:
     type: application
     maturity: high
     url: https://groening-production.up.railway.app/historic
-    description: Historic Resource Inventory — by decade built, style, rank, and a density map.
+    description: Historic Resource Inventory — by decade built, style, rank, and a per-neighborhood choropleth.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
       - ref('mart_historic_summary')
       - ref('mart_historic_by_rank')
       - ref('mart_historic_by_style')
       - ref('mart_historic_by_decade')
-      - ref('mart_historic_map')
+      - ref('mart_historic_choropleth')
 
   - name: sources_page
     label: "Page: Sources & Methodology"

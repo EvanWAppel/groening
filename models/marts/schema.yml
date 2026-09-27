@@ -232,9 +232,57 @@ models:
         tests:
           - not_null
 
-  - name: mart_historic_map
-    description: One row per historic resource (WGS84).
+  # Choropleth marts: one row per neighborhood polygon (a name can span several
+  # multipart polygons, so `neighborhood` is not unique), carrying the boundary
+  # ring and a per-neighborhood count (0 where none) for the shaded map.
+  - name: mart_crime_choropleth
+    description: Per-neighborhood reported-crime counts + boundary polygons.
     columns:
-      - name: latitude
+      - name: neighborhood
+        tests:
+          - not_null
+      - name: boundary_json
+        tests:
+          - not_null
+      - name: n
+        tests:
+          - not_null
+
+  - name: mart_permits_choropleth
+    description: Per-neighborhood building-permit counts + boundary polygons.
+    columns:
+      - name: neighborhood
+        tests:
+          - not_null
+      - name: boundary_json
+        tests:
+          - not_null
+      - name: n
+        tests:
+          - not_null
+
+  - name: mart_historic_choropleth
+    description: Per-neighborhood historic-resource counts + boundary polygons.
+    columns:
+      - name: neighborhood
+        tests:
+          - not_null
+      - name: boundary_json
+        tests:
+          - not_null
+      - name: n
+        tests:
+          - not_null
+
+  - name: mart_trees_choropleth
+    description: Per-neighborhood inventoried-tree counts + boundary polygons.
+    columns:
+      - name: neighborhood
+        tests:
+          - not_null
+      - name: boundary_json
+        tests:
+          - not_null
+      - name: n
         tests:
           - not_null
