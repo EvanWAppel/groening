@@ -279,7 +279,7 @@ feed is live and machine-readable before wiring; `log()` and drop if not.
   `unify_service_requests` (7 tests) stacks both into one `raw.service_requests`
   (status → Open/Closed, unmapped status raises), point-in-polygon tagged →
   `stg_service_requests` (graffiti resolution bucketed) → 4 marts (summary,
-  monthly, graffiti_resolution, per-type choropleth) with 11 data-quality tests.
+  monthly, graffiti_resolution, per-type choropleth) with 12 data-quality tests.
   `views/service_requests.py` (KPIs · monthly volume by type · graffiti outcomes ·
   choropleth with a type toggle), wired into nav (18th topic), Overview tile,
   `SOURCES`, and a `service_requests_page` exposure. Campsite (IRP) layers ruled
