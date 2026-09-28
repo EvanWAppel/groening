@@ -152,6 +152,20 @@ CRIME_LAYER_URLS = {
 }
 
 # --------------------------------------------------------------------------- #
+# Service requests (311) — PortlandMaps ArcGIS "Public" — VERIFIED 2026-09-27  #
+# --------------------------------------------------------------------------- #
+# Portland publishes no generic 311 feed; these are the two non-sensitive,
+# row-level request layers (the IRP campsite-report layers are ruled OUT on
+# sensitivity grounds — DECISIONS.md 2026-09-27). Both are WGS84 points.
+# Graffiti: BPS "Graffiti Reports", ~49k rows, Sept 2022 -> present; CreatedAt
+#   (esri date), Status (closed/solved/open/new/pending), Graffiti_Status detail.
+# Potholes: PBOT "Pothole Repair Reports", rolling last 12 months (~6k rows);
+#   ITEM_DATE_CREATED (esri date), ITEM_STATUS (Closed/Open/In Progress).
+PORTLANDMAPS_PUBLIC = "https://www.portlandmaps.com/arcgis/rest/services/Public"
+GRAFFITI_LAYER_URL = f"{PORTLANDMAPS_PUBLIC}/BPS_Graffiti/MapServer/1"
+POTHOLES_LAYER_URL = f"{PORTLANDMAPS_PUBLIC}/PBOT_Maintenance/MapServer/0"
+
+# --------------------------------------------------------------------------- #
 # Short-Term Rentals — PortlandMaps report API — VERIFIED 2026-08-11           #
 # --------------------------------------------------------------------------- #
 # NOT ArcGIS: a ColdFusion report with JSON/CSV export, paginated at 100/page.
@@ -300,6 +314,12 @@ _LICENSE_PORTLAND_CRIME = (
     "City of Portland — PortlandMaps Public/Crime service, Open Data ToS "
     "(PDDL v1.0; https://www.portlandmaps.com/bps/arpa/tos.pdf)"
 )
+# Graffiti + pothole reports likewise live in the PortlandMaps Public folder,
+# not the /od/ portal; same City ToS, named per service.
+_LICENSE_PORTLAND_REQUESTS = (
+    "City of Portland — PortlandMaps Public/BPS_Graffiti + PBOT_Maintenance services, "
+    "Open Data ToS (PDDL v1.0; https://www.portlandmaps.com/bps/arpa/tos.pdf)"
+)
 _LICENSE_RLIS = (
     "Metro RLIS Open Database License (ODbL-style) — attribution + share-alike "
     "(https://rlisdiscovery.oregonmetro.gov/pages/open-database-license)"
@@ -345,6 +365,14 @@ SOURCES = {
         "url": CRIME_MAPSERVER, "coverage": "Rolling trailing 12 months",
         "grain": "One row per reported offense; three crime-against layers unioned.",
         "license": _LICENSE_PORTLAND_CRIME,
+    },
+    "service_requests": {
+        "title": "Service Requests", "page": "service_requests",
+        "publisher": "BPS (graffiti) + PBOT (potholes) — PortlandMaps",
+        "url": PORTLANDMAPS_PUBLIC,
+        "coverage": "Graffiti Sept 2022 – present; potholes rolling 12 months",
+        "grain": "One row per graffiti or pothole report; status normalized to Open/Closed.",
+        "license": _LICENSE_PORTLAND_REQUESTS,
     },
     "short_term_rentals": {
         "title": "Short-Term Rentals", "page": "short_term_rentals",

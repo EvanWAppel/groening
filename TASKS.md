@@ -272,10 +272,19 @@ feed is live and machine-readable before wiring; `log()` and drop if not.
   `SOURCES` (2 entries → transit page), and a `transit_page` dbt exposure. Full
   dbt build green (34 models, 31 tests); 72 pytest · ruff · ty clean; pages execute
   in bare mode. Skipped trips.txt (67k rows) — a service-frequency view for later.
-- [ ] **E7b — 311 / PDX service requests** — DECIDED (2026-09-27): find a
-  **non-sensitive** or aggregate feed and wire it; drop-and-log if none is clean.
-  Row-level campsite (homelessness) complaints are ruled OUT on sensitivity grounds.
-  Ready to start with a source hunt.
+- [x] **E7b — 311 / PDX service requests.** No generic 311 feed exists; built a
+  **Service Requests** page from the two non-sensitive PortlandMaps request layers
+  (verified live 2026-09-27): BPS **Graffiti Reports** (~49k, Sept 2022 – present)
+  + PBOT **Pothole Repair Reports** (~6k, rolling 12 months). TDD'd
+  `unify_service_requests` (7 tests) stacks both into one `raw.service_requests`
+  (status → Open/Closed, unmapped status raises), point-in-polygon tagged →
+  `stg_service_requests` (graffiti resolution bucketed) → 4 marts (summary,
+  monthly, graffiti_resolution, per-type choropleth) with 11 data-quality tests.
+  `views/service_requests.py` (KPIs · monthly volume by type · graffiti outcomes ·
+  choropleth with a type toggle), wired into nav (18th topic), Overview tile,
+  `SOURCES`, and a `service_requests_page` exposure. Campsite (IRP) layers ruled
+  out; odor (owner PII) and noise (~400 rows) rejected — logged in `DECISIONS.md`.
+  dbt build green (PASS=146); pytest · ruff · ty clean; pages run clean in AppTest.
 - [~] **E7c — Tree-canopy change over time.** DROPPED + logged
   (`city_config.DROPPED_TOPICS['tree_canopy']`): Portland's Urban Forestry canopy
   assessment ships as raster/land-cover snapshots, not a tabular canopy-over-time

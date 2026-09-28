@@ -33,6 +33,7 @@ TOPICS = {
     "housing": ("Affordable Housing", "The built city", "15"),
     "heritage_trees": ("Heritage Trees", "The natural city", "16"),
     "historic": ("Historic Resources", "The built city", "17"),
+    "service_requests": ("Service Requests", "Everyday life", "18"),
 }
 
 

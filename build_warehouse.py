@@ -647,6 +647,90 @@ def fetch_crime() -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+# Unified raw.service_requests schema: one row per request across request types,
+# so marts GROUP BY request_type and a new request layer is just another stack.
+SERVICE_REQUEST_COLUMNS = [
+    "request_type",
+    "request_id",
+    "status",
+    "raw_status",
+    "resolution",
+    "created_at",
+    "longitude",
+    "latitude",
+]
+
+# Raw status (lower-cased) -> Open/Closed, per layer vocabulary (verified
+# 2026-09-27). Anything unmapped raises so a new upstream status is never guessed.
+_REQUEST_STATUS = {
+    "closed": "Closed",
+    "solved": "Closed",
+    "open": "Open",
+    "new": "Open",
+    "pending": "Open",
+    "in progress": "Open",
+}
+
+
+def _normalize_requests(
+    df: pd.DataFrame,
+    request_type: str,
+    id_col: str,
+    status_col: str,
+    created_col: str,
+    resolution_col: str | None = None,
+) -> pd.DataFrame:
+    """Map one ArcGIS request layer onto SERVICE_REQUEST_COLUMNS."""
+    if df.empty:
+        raise ValueError(f"{request_type} service-request layer returned zero rows")
+    raw_status = df[status_col].astype("object")
+    status = raw_status.map(lambda s: _REQUEST_STATUS.get(str(s).strip().lower()))
+    unknown = sorted(set(raw_status[status.isna()].astype(str)))
+    if unknown:
+        raise ValueError(f"{request_type}: unmapped request status values {unknown}")
+
+    def _nullable(values) -> pd.Series:
+        # Explicit object dtype so missing values stay Python None (SQL NULL);
+        # pandas 3 would otherwise infer a str dtype and coerce None to NaN.
+        return pd.Series(
+            [None if pd.isna(v) else v for v in values], index=df.index, dtype="object"
+        )
+
+    return pd.DataFrame(
+        {
+            "request_type": request_type,
+            "request_id": df[id_col].astype(str),
+            "status": status,
+            "raw_status": raw_status,
+            "resolution": _nullable(df[resolution_col] if resolution_col else [None] * len(df)),
+            "created_at": _nullable(df[created_col]),
+            "longitude": df["longitude"],
+            "latitude": df["latitude"],
+        },
+        columns=SERVICE_REQUEST_COLUMNS,
+    )
+
+
+def unify_service_requests(graffiti: pd.DataFrame, potholes: pd.DataFrame) -> pd.DataFrame:
+    """Stack the graffiti + pothole request layers into one normalized frame."""
+    frames = [
+        _normalize_requests(
+            graffiti, "Graffiti", "Id", "Status", "CreatedAt", resolution_col="Graffiti_Status"
+        ),
+        _normalize_requests(potholes, "Pothole", "ITEM_ID", "ITEM_STATUS", "ITEM_DATE_CREATED"),
+    ]
+    return pd.concat(frames, ignore_index=True)
+
+
+def fetch_service_requests() -> pd.DataFrame:
+    """PortlandMaps 311-style service requests: graffiti + pothole reports (WGS84)."""
+    log.info("Fetching graffiti reports from %s ...", cfg.GRAFFITI_LAYER_URL)
+    graffiti = fetch_layer(cfg.GRAFFITI_LAYER_URL, geometry=True)
+    log.info("Fetching pothole reports from %s ...", cfg.POTHOLES_LAYER_URL)
+    potholes = fetch_layer(cfg.POTHOLES_LAYER_URL, geometry=True)
+    return unify_service_requests(graffiti, potholes)
+
+
 def fetch_air_quality() -> pd.DataFrame:
     """EPA AQS keyless daily bulk files, filtered to the OR tri-county metro.
 
@@ -1034,6 +1118,9 @@ def main() -> None:
 
         log.info("Fetching crime (PortlandMaps ArcGIS) ...")
         load_raw(con, "crime", tag_neighborhoods(fetch_crime(), polygons))
+
+        log.info("Fetching service_requests (PortlandMaps ArcGIS graffiti + potholes) ...")
+        load_raw(con, "service_requests", tag_neighborhoods(fetch_service_requests(), polygons))
 
         log.info("Fetching air_quality (EPA AQS bulk, tri-county) ...")
         load_raw(con, "air_quality", fetch_air_quality())

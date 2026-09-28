@@ -5,7 +5,7 @@
 Groening is an interactive **Streamlit** app over a **DuckDB** warehouse built with
 **dbt**. It ingests free public datasets about the Portland, OR metro (Multnomah,
 Washington, and Clackamas counties) and presents them as maps, charts, and
-searchable tables. Seventeen datasets, from building permits to river flow to
+searchable tables. Eighteen datasets, from building permits to river flow to
 transit, each wired end to end from a live public source to a mart to a page.
 
 The point of interest for a reviewer is not Portland. It is that the whole pipeline
@@ -65,16 +65,17 @@ models/marts/*.sql   → tables  (viz-ready aggregations)
 views/*.py (Streamlit) read the marts via app_db.query()
 ```
 
-Charts are Altair. Maps are PyDeck, with 3D hexbins for dense point layers like
-permits, crime, and the street-tree inventory.
+Charts are Altair. Maps are PyDeck, with neighborhood choropleths for dense point
+layers like permits, crime, service requests, and the street-tree inventory.
 
 ## The datasets
 
-Sixteen topics, each fetch to mart to page: Building Permits, Parks, Reported
+Eighteen topics, each fetch to mart to page: Building Permits, Parks, Reported
 Crime, Short-Term Rentals, Restaurant Inspections, Willamette River flow, Rain and
 Records, Air Quality, Street Trees, Bike Network, Air Travel, Marriages, the
 Urban Growth Boundary, Transit (TriMet GTFS), Affordable Housing, Heritage
-Trees, and Historic Resources. Topics that Portland does not
+Trees, Historic Resources, and Service Requests (graffiti + pothole reports).
+Topics that Portland does not
 publish in a machine-readable form were dropped and logged rather than faked. A
 Sources & Methodology page documents every feed's provenance, per-source row
 counts, the dbt test summary, and the full pipeline lineage; the Overview page
