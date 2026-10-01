@@ -67,3 +67,35 @@ Four Phase 2 direction calls made by Evan in a decision review (agent-drafted, E
 **TOPIC-311 / E7b — Find a NON-SENSITIVE feed.** Chose to hunt for a non-sensitive or aggregate 311 / service-request feed and wire that; drop-and-log if nothing clean exists. Rejected wiring the row-level illegal-campsite (homelessness) complaints — the only row-level option — on sensitivity grounds. **Why:** the app is a public open-data explorer; row-level homelessness complaint data is sensitive and not worth the ethical/optics cost when an aggregate alternative may exist. This clears the long-standing TOPIC-311 "HELD for Evan" blocker.
 
 **DEPLOY-06 — Custom domain: DEFERRED.** Keep the Railway `*.up.railway.app` URL for now; don't wire `groening.evanappel.me` yet. **Why:** cosmetic; no functional gain. Revisit alongside the broader portfolio-orchestrator manifest work.
+
+---
+
+## 2026-09-27 — Source license strings verified against publishers' actual terms
+
+**Chose:** replace the descriptive municipal/state `license` strings in
+`city_config.SOURCES` with strings that cite each publisher's actual open-data
+terms (researched 2026-09-27; DRY'd into `_LICENSE_*` constants).
+
+- **City of Portland / PortlandMaps (9 datasets)** → **Open Data Commons PDDL v1.0
+  (public domain)**, per the City's Open Data ToS §VI (rev. 2022-07-05,
+  https://www.portlandmaps.com/bps/arpa/tos.pdf). HIGH confidence — the ToS is
+  explicit. `crime` gets a variant naming the Public/Crime service (it's not on the
+  `/od/` portal path, though the same City ToS governs it).
+- **Metro RLIS (`ugb`)** → **RLIS Open Database License (ODbL-style), attribution +
+  share-alike**, confirmed in the UGB layer's own metadata ("Use Constraints: …
+  RLIS Open Database End User License Agreement"). HIGH that it's the open license;
+  MEDIUM on the bare "ODbL" label, so the string says "ODbL-style" + the URL.
+
+**Softer strings (flagged for Evan):**
+- **TriMet GTFS** — the static feed is keyless/openly published, but TriMet stamps
+  no CC/PDDL label and its site ToS reads restrictively. String says "publicly
+  published, keyless; TriMet developer Terms of Use" — deliberately NOT "public
+  domain"/"CC BY" without a citation. MEDIUM confidence.
+- **OHA marriages** / **Multnomah inspections** — both are public
+  aggregate/records publications with **no explicit reuse license** found. Strings
+  say exactly that, and clarify OHA = the aggregate publication (record-level OHA
+  vital data is confidential under ORS 432.350; not what we fetch).
+
+**Why:** the Sources & Methodology page is public-facing; accurate license
+provenance is part of the data-product story. Federal sources were already correct
+(U.S. public domain) and were left untouched.

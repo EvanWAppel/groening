@@ -280,57 +280,91 @@ BULK_ENCODING = "cp1252"
 #              page cites where the data literally comes from, not a landing page.
 # `coverage` : temporal/extent coverage (verified 2026-08-11; see comments above).
 # `grain`    : one-line description of a row + the key raw->mart transform.
-# `license`  : accurate for U.S. federal works (public domain); municipal/state
-#              entries use descriptive attribution — TIGHTEN before public use.
+# `license`  : verified against each publisher's actual open-data terms
+#              (researched 2026-09-27). Federal works are U.S. public domain;
+#              municipal/state strings below cite the governing license + URL.
+#              Confidence notes are in DECISIONS.md — TriMet GTFS and the OHA/
+#              Multnomah "no explicit license" strings are the softer ones.
+
+# City of Portland PortlandMaps Open Data is released under the Open Data Commons
+# Public Domain Dedication & License (PDDL) v1.0 per the City's Open Data ToS
+# (https://www.portlandmaps.com/bps/arpa/tos.pdf, §VI, rev. 2022-07-05).
+_LICENSE_PORTLAND = (
+    "Public domain — Open Data Commons PDDL v1.0 "
+    "(City of Portland Open Data ToS; https://www.portlandmaps.com/bps/arpa/tos.pdf)"
+)
+# Crime is served from the PortlandMaps Public/Crime service (not the /od/ portal),
+# so name the service explicitly while still citing the same City ToS.
+_LICENSE_PORTLAND_CRIME = (
+    "City of Portland — PortlandMaps Public/Crime service, Open Data ToS "
+    "(PDDL v1.0; https://www.portlandmaps.com/bps/arpa/tos.pdf)"
+)
+_LICENSE_RLIS = (
+    "Metro RLIS Open Database License (ODbL-style) — attribution + share-alike "
+    "(https://rlisdiscovery.oregonmetro.gov/pages/open-database-license)"
+)
+_LICENSE_TRIMET = (
+    "TriMet GTFS static feed — publicly published, keyless; "
+    "TriMet developer Terms of Use (https://developer.trimet.org/GTFS.shtml)"
+)
+_LICENSE_OHA = (
+    "Oregon Health Authority aggregate vital statistics — public State of Oregon "
+    "publication (no explicit reuse license stated)"
+)
+_LICENSE_MULTCO = (
+    "Multnomah County Environmental Health public records (via MyHealthDepartment) "
+    "— no explicit reuse license or warranty"
+)
+
 SOURCES = {
     "building_permits": {
         "title": "Building Permits", "page": "building_permits",
         "publisher": "City of Portland — PortlandMaps Open Data",
         "url": PERMITS_LAYER_URL, "coverage": "~1995 – present",
         "grain": "One row per residential permit; geocoded to WGS84 points.",
-        "license": "City of Portland open data",
+        "license": _LICENSE_PORTLAND,
     },
     "parks": {
         "title": "Parks", "page": "parks",
         "publisher": "Portland Parks & Recreation — PortlandMaps",
         "url": PARKS_LAYER_URL, "coverage": "Current inventory",
         "grain": "One row per park; boundary polygon reduced to a centroid.",
-        "license": "City of Portland open data",
+        "license": _LICENSE_PORTLAND,
     },
     "trees": {
         "title": "Trees", "page": "trees",
         "publisher": "Portland Parks & Recreation — PortlandMaps",
         "url": TREES_LAYER_URL, "coverage": "Current inventory",
         "grain": "One row per inventoried street/park tree (taxonomy + benefits).",
-        "license": "City of Portland open data",
+        "license": _LICENSE_PORTLAND,
     },
     "crime": {
         "title": "Reported Crime", "page": "crime",
         "publisher": "Portland Police Bureau — PortlandMaps",
         "url": CRIME_MAPSERVER, "coverage": "Rolling trailing 12 months",
         "grain": "One row per reported offense; three crime-against layers unioned.",
-        "license": "City of Portland open data",
+        "license": _LICENSE_PORTLAND_CRIME,
     },
     "short_term_rentals": {
         "title": "Short-Term Rentals", "page": "short_term_rentals",
         "publisher": "City of Portland — PortlandMaps report API",
         "url": STR_REPORT_URL, "coverage": "Current registry",
         "grain": "One row per ASTR permit; Web Mercator coords reprojected to WGS84.",
-        "license": "City of Portland open data",
+        "license": _LICENSE_PORTLAND,
     },
     "bike_network": {
         "title": "Bike Network", "page": "bike",
         "publisher": "Portland Bureau of Transportation — PortlandMaps",
         "url": BIKE_NETWORK_URL, "coverage": "Segments with a recorded build year",
         "grain": "One row per bikeway segment; aggregated to miles built per year.",
-        "license": "City of Portland open data",
+        "license": _LICENSE_PORTLAND,
     },
     "ugb": {
         "title": "Urban Growth Boundary", "page": "ugb",
         "publisher": "Metro (regional government)",
         "url": UGB_URL, "coverage": "Current boundary (no amendment history)",
         "grain": "Single dissolved polygon; area + outer ring for the map.",
-        "license": "Metro RLIS open data",
+        "license": _LICENSE_RLIS,
     },
     "air_quality": {
         "title": "Air Quality", "page": "air_quality",
@@ -365,49 +399,49 @@ SOURCES = {
         "publisher": "Oregon Health Authority — vital statistics",
         "url": MARRIAGE_XLSX_URL, "coverage": "1995 – present",
         "grain": "One row per year (Multnomah); aggregate counts + same-sex breakout.",
-        "license": "Oregon OHA public statistics",
+        "license": _LICENSE_OHA,
     },
     "restaurant_inspections": {
         "title": "Restaurant Inspections", "page": "restaurant_inspections",
         "publisher": "Multnomah County Environmental Health (MyHealthDepartment)",
         "url": INSPECTIONS_URL, "coverage": "Rolling ~6 months",
         "grain": "One row per inspection; 0–100 sanitation score (no coordinates).",
-        "license": "Multnomah County public records",
+        "license": _LICENSE_MULTCO,
     },
     "transit_routes": {
         "title": "Transit — Routes", "page": "transit",
         "publisher": "TriMet — GTFS static feed",
         "url": TRIMET_GTFS_URL, "coverage": "Current published schedule",
         "grain": "One row per route; GTFS route_type mapped to a mode label.",
-        "license": "TriMet open data (GTFS)",
+        "license": _LICENSE_TRIMET,
     },
     "transit_stops": {
         "title": "Transit — Stops", "page": "transit",
         "publisher": "TriMet — GTFS static feed",
         "url": TRIMET_GTFS_URL, "coverage": "Current published schedule",
         "grain": "One row per stop; WGS84 lat/lon for the map.",
-        "license": "TriMet open data (GTFS)",
+        "license": _LICENSE_TRIMET,
     },
     "housing": {
         "title": "Affordable Housing", "page": "housing",
         "publisher": "Portland Housing Bureau — PortlandMaps",
         "url": HOUSING_LAYER_URL, "coverage": "Regulated portfolio to date",
         "grain": "One row per regulated affordable-housing project (WGS84 point).",
-        "license": "City of Portland open data",
+        "license": _LICENSE_PORTLAND,
     },
     "heritage_trees": {
         "title": "Heritage Trees", "page": "heritage_trees",
         "publisher": "Portland Parks & Recreation (Urban Forestry) — PortlandMaps",
         "url": HERITAGE_TREES_URL, "coverage": "Designated 1973 – present",
         "grain": "One row per designated heritage tree; active (non-delisted) only in staging.",
-        "license": "City of Portland open data",
+        "license": _LICENSE_PORTLAND,
     },
     "historic": {
         "title": "Historic Resources", "page": "historic",
         "publisher": "City of Portland (Historic Resource Inventory) — PortlandMaps",
         "url": HISTORIC_LAYER_URL, "coverage": "Surveyed inventory",
         "grain": "One row per historic resource; free-text year parsed to a 4-digit year.",
-        "license": "City of Portland open data",
+        "license": _LICENSE_PORTLAND,
     },
 }
 
