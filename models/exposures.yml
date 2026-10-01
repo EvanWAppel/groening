@@ -238,3 +238,16 @@ exposures:
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
       - ref('mart_build_metadata')
+
+  - name: service_requests_page
+    label: "Page: Service Requests"
+    type: application
+    maturity: high
+    url: https://groening-production.up.railway.app/service_requests
+    description: 311-style graffiti + pothole reports — volume over time, open/closed status, graffiti resolution, and per-type neighborhood choropleths.
+    owner: {name: Evan Appel, email: appelew@gmail.com}
+    depends_on:
+      - ref('mart_service_requests_summary')
+      - ref('mart_service_requests_monthly')
+      - ref('mart_graffiti_resolution')
+      - ref('mart_service_requests_choropleth')

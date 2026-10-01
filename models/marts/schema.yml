@@ -286,3 +286,51 @@ models:
       - name: n
         tests:
           - not_null
+
+  # Service requests (E7b): graffiti + potholes unified by request_type.
+  - name: mart_service_requests_summary
+    description: One headline row per request type (volume, open/closed, coverage).
+    columns:
+      - name: request_type
+        tests:
+          - not_null
+          - unique
+          - accepted_values:
+              values: ['Graffiti', 'Pothole']
+      - name: total_requests
+        tests:
+          - not_null
+
+  - name: mart_service_requests_monthly
+    description: One row per month x request type.
+    columns:
+      - name: month
+        tests:
+          - not_null
+      - name: request_type
+        tests:
+          - not_null
+
+  - name: mart_graffiti_resolution
+    description: Graffiti report counts by bucketed resolution outcome.
+    columns:
+      - name: resolution
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_service_requests_choropleth
+    description: Per-request-type, per-neighborhood counts + boundary polygons.
+    columns:
+      - name: request_type
+        tests:
+          - not_null
+      - name: neighborhood
+        tests:
+          - not_null
+      - name: boundary_json
+        tests:
+          - not_null
+      - name: n
+        tests:
+          - not_null

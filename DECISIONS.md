@@ -115,3 +115,31 @@ regression test that parses `build_warehouse.main()`'s `load_raw` calls and
 asserts each loaded table is catalogued. **Rejected:** a `SUPPORT_TABLES`
 exclusion set — it would hide a real upstream dependency of five choropleth
 pages from the provenance page, which is the opposite of what that page is for.
+
+---
+
+## 2026-09-27 — E7b Service Requests: graffiti + potholes, unified into one raw table
+
+**Chose:** build E7b from the two non-sensitive, row-level request layers Portland
+publishes on PortlandMaps (Public folder): **BPS Graffiti Reports**
+(`BPS_Graffiti/MapServer/1`, ~49k rows, Sept 2022 – present) and **PBOT Pothole
+Repair Reports** (`PBOT_Maintenance/MapServer/0`, rolling 12 months, ~6k rows),
+shown together on one "Service Requests" page (Evan picked "both on one page").
+They land as a **single `raw.service_requests` table** keyed by `request_type`,
+unified at build time by a TDD'd pure helper (`unify_service_requests`), with
+status normalized to Open/Closed (raw status kept) and an **unmapped status
+raising** rather than being guessed.
+
+**Rejected:** (a) **IRP campsite reports** (`OMF_IRP_Layers`, `IRP Campsite
+Reports`) — ruled out on sensitivity grounds (2026-09-27 direction decision).
+(b) **BES Odor Complaints** — carries property-owner names/addresses (PII) on
+every row. (c) **BDS Noise Complaints** — only ~400 rows/yr, too thin for a page.
+(d) **One raw table per request type** — mirrors the source layers, but every
+mart would need a UNION and a third request type would mean new models; the
+unified table makes each mart a `GROUP BY request_type` and a new layer just
+another stack in `unify_service_requests`.
+
+**Why:** Portland has no generic 311 feed, so "311-style" is the honest framing
+(the page says so). The two layers have different coverage windows (graffiti ~4
+years vs potholes rolling 12 months), so the page labels each window explicitly
+rather than implying a like-for-like comparison.

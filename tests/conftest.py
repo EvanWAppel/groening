@@ -52,3 +52,42 @@ def usgs_dv_payload() -> dict:
             ]
         }
     }
+
+
+@pytest.fixture
+def graffiti_frame():
+    """A tiny BPS Graffiti Reports frame, shaped as fetch_layer returns it."""
+    import pandas as pd
+
+    return pd.DataFrame(
+        {
+            "OBJECTID": [1, 2, 3],
+            "Id": [101, 102, 103],
+            "Status": ["closed", "Pending", "solved"],
+            "CreatedAt": ["2024-01-05 10:00:00", "2024-02-10 09:30:00", None],
+            "UpdatedAt": ["2024-01-09 12:00:00", "2024-02-11 08:00:00", "2024-03-01 00:00:00"],
+            "Graffiti_Status": ["Solved - Cleaned by contractor", None, "SOLVED"],
+            "Square_footage": ["20", None, "5"],
+            "longitude": [-122.66, -122.60, -122.70],
+            "latitude": [45.52, 45.50, 45.55],
+        }
+    )
+
+
+@pytest.fixture
+def potholes_frame():
+    """A tiny PBOT Pothole Repair Reports frame, shaped as fetch_layer returns it."""
+    import pandas as pd
+
+    return pd.DataFrame(
+        {
+            "OBJECTID": [7, 8],
+            "ITEM_ID": [5001, 5002],
+            "ITEM_STATUS": ["Closed", "In Progress"],
+            "ITEM_DATE_CREATED": ["2025-11-01 14:00:00", "2026-01-15 07:45:00"],
+            "ITEM_CATEGORY_NAME": ["Pothole Hotline 823-BUMP (2867)"] * 2,
+            "LOCATION_NEIGHBORHOOD": ["Buckman", "Lents"],
+            "longitude": [-122.65, -122.57],
+            "latitude": [45.51, 45.48],
+        }
+    )

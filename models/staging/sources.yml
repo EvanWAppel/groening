@@ -35,6 +35,14 @@ sources:
           Portland Police Bureau reported crime (PortlandMaps ArcGIS Public/Crime
           layers 1/40/59), rolling trailing-12-month window, WGS84 block-level
           points with REPORTED_DATETIME, crime-against category, and offense group.
+      - name: service_requests
+        description: >
+          PortlandMaps 311-style service requests, unified at build time: BPS
+          Graffiti Reports (Public/BPS_Graffiti layer 1, Sept 2022-present) and
+          PBOT Pothole Repair Reports (Public/PBOT_Maintenance layer 0, rolling 12
+          months). One row per request with request_type, status normalized to
+          Open/Closed (raw_status kept), graffiti resolution detail, created_at,
+          WGS84 point, and a point-in-polygon hood_name.
       - name: air_quality
         description: >
           EPA AQS daily PM2.5 / Ozone summaries for the OR tri-county metro (state
