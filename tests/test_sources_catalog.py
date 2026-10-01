@@ -1,8 +1,32 @@
 """TDD for the Sources & Methodology catalog (city_config.SOURCES)."""
 
+import ast
+from pathlib import Path
+
 import pytest
 
+import build_warehouse
 import city_config as cfg
+
+
+def _raw_tables_loaded_by_build() -> set[str]:
+    """Every raw table main() lands, read from its load_raw(con, "<name>", ...) calls.
+
+    GTFS members are loaded in a loop over city_config.GTFS_MEMBERS, so those are
+    added explicitly. build_metadata is excluded: it is written after the row
+    counts are taken, so it never appears in the provenance mart.
+    """
+    tree = ast.parse(Path(build_warehouse.__file__).read_text())
+    main = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "main")
+    names = {
+        call.args[1].value
+        for call in ast.walk(main)
+        if isinstance(call, ast.Call)
+        and getattr(call.func, "id", None) == "load_raw"
+        and isinstance(call.args[1], ast.Constant)
+        and isinstance(call.args[1].value, str)
+    }
+    return (names | set(cfg.GTFS_MEMBERS)) - {"build_metadata"}
 
 REQUIRED_FIELDS = {"title", "page", "publisher", "url", "coverage", "grain", "license"}
 
@@ -27,6 +51,12 @@ class TestSourcesCatalog:
         transit = {t: m for t, m in cfg.SOURCES.items() if t.startswith("transit_")}
         assert len(transit) >= 2
         assert {m["page"] for m in transit.values()} == {"transit"}
+
+    def test_every_raw_table_the_build_loads_is_catalogued(self):
+        # source_catalog_rows raises on an uncatalogued raw table, so a table the
+        # build loads without a SOURCES entry breaks the Sources page at runtime.
+        missing = _raw_tables_loaded_by_build() - set(cfg.SOURCES)
+        assert not missing, f"loaded by build_warehouse.main but not in SOURCES: {missing}"
 
     def test_urls_are_http(self):
         for table, meta in cfg.SOURCES.items():

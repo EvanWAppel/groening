@@ -274,7 +274,8 @@ BULK_ENCODING = "cp1252"
 # lives in the one "which city" file: swapping metros re-points these too. The
 # Sources page joins this catalog with the build-provenance mart's row counts.
 #
-# `page`     : views/<page>.py slug the row links to (all == key except bike).
+# `page`     : views/<page>.py slug the row links to (all == key except bike;
+#              the neighborhoods support layer points at the sources page).
 # `publisher`: the agency that publishes the data.
 # `url`      : the exact endpoint we fetch (the config constant above), so the
 #              page cites where the data literally comes from, not a landing page.
@@ -441,6 +442,15 @@ SOURCES = {
         "publisher": "City of Portland (Historic Resource Inventory) — PortlandMaps",
         "url": HISTORIC_LAYER_URL, "coverage": "Surveyed inventory",
         "grain": "One row per historic resource; free-text year parsed to a 4-digit year.",
+        "license": _LICENSE_PORTLAND,
+    },
+    # Support layer, not a topic: every choropleth page shades by these polygons.
+    "neighborhoods": {
+        "title": "Neighborhood Boundaries", "page": "sources",
+        "publisher": "City of Portland — PortlandMaps Open Data",
+        "url": NEIGHBORHOODS_LAYER_URL, "coverage": "Current boundaries",
+        "grain": "One row per neighborhood polygon (WGS84 ring); points are tagged "
+        "to it by point-in-polygon for the choropleth maps.",
         "license": _LICENSE_PORTLAND,
     },
 }

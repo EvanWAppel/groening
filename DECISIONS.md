@@ -99,3 +99,19 @@ terms (researched 2026-09-27; DRY'd into `_LICENSE_*` constants).
 **Why:** the Sources & Methodology page is public-facing; accurate license
 provenance is part of the data-product story. Federal sources were already correct
 (U.S. public domain) and were left untouched.
+
+---
+
+## 2026-09-27 — Catalog the neighborhoods support layer in SOURCES (Sources-page fix)
+
+**Bug:** PR #8 added `raw.neighborhoods` (the choropleth base layer) without a
+`city_config.SOURCES` entry. A full build stamps every raw table into
+`mart_build_metadata`, and `source_catalog_rows` deliberately raises on any
+uncatalogued table, so the Sources & Methodology page would raise a KeyError on
+every build since #8.
+
+**Chose:** add a "Neighborhood Boundaries" SOURCES entry (Evan's call), plus a
+regression test that parses `build_warehouse.main()`'s `load_raw` calls and
+asserts each loaded table is catalogued. **Rejected:** a `SUPPORT_TABLES`
+exclusion set — it would hide a real upstream dependency of five choropleth
+pages from the provenance page, which is the opposite of what that page is for.
