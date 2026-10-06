@@ -285,6 +285,20 @@ feed is live and machine-readable before wiring; `log()` and drop if not.
   `SOURCES`, and a `service_requests_page` exposure. Campsite (IRP) layers ruled
   out; odor (owner PII) and noise (~400 rows) rejected — logged in `DECISIONS.md`.
   dbt build green (PASS=146); pytest · ruff · ty clean; pages run clean in AppTest.
+  Independently reviewed 2026-10-05 (no high findings). Acted on: added
+  `models/staging/schema.yml` — (request_type, request_id) uniqueness (guards the
+  unordered paged ArcGIS fetch double-counting), not_null id/status, status ∈
+  {Open, Closed}. Remaining advisory findings → E7b-followups below.
+- [ ] **E7b-followups — advisory review findings (not blocking).**
+  (1) `fetch_layer` emits naive UTC; staging treats it as local → evening reports
+  shift a day / month, and `created_at <= now()` can drop the newest ~7h on a
+  Pacific-time machine (likely shared with crime — fix once in `fetch_layer`).
+  (2) Graffiti resolution CASE falls through to `'Other'` silently and is untested;
+  `%referred%` precedes `open%`. (3) `astype(str)` on ids can yield `"101.0"` /
+  `"nan"` — assert non-null ids in `unify_service_requests`. (4) Undated/future
+  rows are filtered without a log. (5) Choropleth excludes points outside every
+  neighborhood, so map totals < KPI totals with no caption. (6) Clearer error than
+  `KeyError` when a type is missing from the summary.
 - [~] **E7c — Tree-canopy change over time.** DROPPED + logged
   (`city_config.DROPPED_TOPICS['tree_canopy']`): Portland's Urban Forestry canopy
   assessment ships as raster/land-cover snapshots, not a tabular canopy-over-time

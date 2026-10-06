@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: stg_service_requests
+    description: >
+      Unified graffiti + pothole service requests. Guards against the paged
+      ArcGIS fetch repeating rows (which would silently inflate every mart) and
+      against status drifting from the Open/Closed mapping in build_warehouse.
+    tests:
+      - unique:
+          column_name: "request_type || '|' || request_id"
+    columns:
+      - name: request_id
+        tests:
+          - not_null
+      - name: status
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Open", "Closed"]
