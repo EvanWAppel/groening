@@ -4,7 +4,7 @@
 city: Portland
 blurb: >-
   crime, building permits, 311 service requests (graffiti and potholes), restaurant
-  inspections, short-term rentals, affordable housing, historic resources, street
+  inspections, short-term rentals, affordable housing, historic resources, park
   and heritage trees, parks, bike network, transit routes and stops, weather, the
   Willamette River, air quality, airport passenger traffic, marriages, and the
   urban growth boundary
@@ -95,13 +95,13 @@ examples:
     guidance: Use mart_permits_monthly (permit_count, total_valuation by issue_month) or mart_permits_by_type (by work_class).
     grounds: [mart_permits_monthly, mart_permits_by_type]
   - question: How many graffiti and pothole reports are there?
-    guidance: Use mart_service_requests_summary (total, open, closed by request_type); graffiti and potholes cover different time windows.
+    guidance: Use mart_service_requests_summary (total_requests, open_requests, closed_requests by request_type); graffiti and potholes cover different time windows.
     grounds: [mart_service_requests_summary]
   - question: How are restaurant inspection scores distributed?
     guidance: Use mart_inspections_score_dist (inspections by score_band) or mart_inspections_monthly (avg_score by month).
     grounds: [mart_inspections_score_dist, mart_inspections_monthly]
   - question: How many short-term rental permits are there?
-    guidance: Use mart_short_term_rentals (one row per application; permit_type, permit_status).
+    guidance: Use mart_short_term_rentals (permit_type, permit_status); application_number can repeat, so count distinct application_number for applications.
     grounds: [mart_short_term_rentals]
   - question: How many affordable housing units have been built?
     guidance: Use mart_housing_summary (total_units, regulated_units) or mart_housing_by_year.
@@ -112,8 +112,8 @@ examples:
   - question: What are the most common heritage tree species?
     guidance: Use mart_heritage_by_species (tree_count, avg_diameter_in by common_name).
     grounds: [mart_heritage_by_species]
-  - question: What are the most common street tree species?
-    guidance: Use mart_trees_by_species (tree_count by common_name); mart_trees_summary for totals and benefits.
+  - question: What are the most common park tree species?
+    guidance: Use mart_trees_by_species (tree_count by common_name and genus; Parks Tree Inventory, not street trees); mart_trees_summary for totals and benefits.
     grounds: [mart_trees_by_species, mart_trees_summary]
   - question: How many miles of bike lanes are there by type?
     guidance: Use mart_bike_by_facility (miles, segments by facility).
@@ -141,11 +141,12 @@ examples:
     grounds: [mart_ugb]
 
 planner_notes:
-  - Choropleth tables (mart_*_choropleth) have one row per neighborhood polygon; a neighborhood with several polygons repeats the same n, so select distinct neighborhood, n before summing or ranking.
+  - Choropleth tables (mart_*_choropleth) have one row per neighborhood polygon; a neighborhood with several polygons repeats the same n, so select distinct neighborhood, n (plus request_type in mart_service_requests_choropleth) before summing or ranking.
   - Crime covers a rolling trailing 12 months; restaurant inspections a rolling ~6 months; potholes a rolling 12 months while graffiti runs from Sept 2022, so the two request types are not comparable.
   - mart_weather_monthly.avg_precip_in is the mean DAILY rainfall, not a monthly total; mart_weather_wettest_days holds only the top 25 days.
   - The latest year in mart_tourism_annual is partial; filter months_reported = 12 for full-year comparisons.
   - Summing mart_air_quality_bad_days.unhealthy_days across pollutants double-counts days bad for both.
+  - Tree tables are the Parks Tree Inventory, not a citywide street-tree census; abstain or caveat street-tree questions.
   - mart_bike_by_year.cumulative_miles counts only segments still active today, not the historical network size.
 
 grounding:

@@ -48,7 +48,7 @@ cases:
     expect: answer
     must_reference: [mart_heritage_by_species]
   - id: tree_benefits
-    question: What are the estimated annual benefits of the tree inventory in dollars?
+    question: What are the estimated annual benefits of the park tree inventory in dollars?
     expect: answer
     must_reference: [mart_trees_summary]
   - id: bike_facility

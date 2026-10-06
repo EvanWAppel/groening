@@ -197,7 +197,7 @@ models:
 
   - name: mart_trees_summary
     description: >-
-      Single-row street-tree inventory summary. Built from the PortlandMaps "Parks Tree
+      Single-row tree inventory summary (trees in the Parks Tree Inventory, not a citywide street-tree census). Built from the PortlandMaps "Parks Tree
       Inventory" layer (~25.7k inventoried trees), not a census of every tree in the city.
     columns:
       - name: total_trees
