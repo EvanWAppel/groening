@@ -15,6 +15,10 @@ COPY . .
 # the dbt marts). The DB stays out of git and is rebuilt fresh on every deploy.
 RUN python build_warehouse.py && dbt build --profiles-dir .
 
+# catalog.json (column types) for the Ask Tiresias page; manifest.json comes from
+# the build above.
+RUN dbt docs generate --profiles-dir .
+
 # Railway injects $PORT at runtime; default to 8501 for local runs. Exec form
 # (via sh -c so $PORT still expands) so Streamlit receives SIGTERM directly.
 EXPOSE 8501

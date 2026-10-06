@@ -143,3 +143,18 @@ another stack in `unify_service_requests`.
 (the page says so). The two layers have different coverage windows (graffiti ~4
 years vs potholes rolling 12 months), so the page labels each window explicitly
 rather than implying a like-for-like comparison.
+
+## 2026-10-05 — Add the Ask Tiresias page (drafted by Claude, awaiting Evan's confirmation)
+
+Groening adopts the Tiresias library (github.com/EvanWAppel/tiresias v0.1.0, pinned
+by the tag's commit archive) with its own `tiresias.yml`. Scope: 50 of 51 marts;
+**`mart_build_metadata` excluded** (pipeline bookkeeping). Map-only: the six
+`boundary_json` polygon columns and `mart_transit_routes.route_color`. Planner
+notes carry the count traps (choropleth rows repeat a neighborhood's `n` per
+polygon; rolling windows for crime, inspections, potholes; daily-mean precip;
+partial latest tourism year; bad-air days double-count across pollutants).
+Grounding threshold **0.62**, midway between the generic off-topic band and the
+lowest answerable question (rejected: 0.66+, which would refuse the subtle cases
+too but within ~0.03 of a real question). All 198 column docs written from code;
+14 unsure claims in `TIRESIAS.md`. `requires-python` narrowed to 3.12. Two
+mixed-case columns read as undocumented until Tiresias v0.1.1 (engine fix, PR #5).

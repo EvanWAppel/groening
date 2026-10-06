@@ -3,7 +3,7 @@ name = "groening"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "altair>=6.2.2",
     "dbt-duckdb>=1.11.0",
@@ -13,6 +13,7 @@ dependencies = [
     "pandas>=3.0.5",
     "pydeck>=0.9.3",
     "streamlit>=1.61.1",
+    "tiresias[streamlit]",
     "uvicorn>=0.52.1",
 ]
 
@@ -28,4 +29,7 @@ dev = [
 [tool.pytest.ini_options]
 # Tests import top-level modules (build_warehouse, city_config) by name.
 pythonpath = ["."]
+
+[tool.uv.sources]
+tiresias = { url = "https://github.com/EvanWAppel/tiresias/archive/bbb34d6d2ebf4c9da9b4d76d20b501470214211b.zip" }
 
