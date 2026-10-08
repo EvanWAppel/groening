@@ -11,7 +11,10 @@ st.set_page_config(
 )
 apply_style()
 
-pages = [st.Page("views/overview.py", title="Overview", default=True)]
+pages = [
+    st.Page("views/overview.py", title="Overview", default=True),
+    st.Page("views/ask.py", title="Ask Tiresias"),
+]
 pages.extend(st.Page(f"views/{slug}.py", title=info[0]) for slug, info in TOPICS.items())
 pages.append(st.Page("views/sources.py", title="Sources & Methodology"))
 page = st.navigation(pages, position="hidden")
@@ -20,6 +23,7 @@ with st.sidebar:
     st.html('<div class="sidebar-brand">groening<span>.</span></div>'
             '<div class="sidebar-intro">Portland, Oregon<br>An open-data field guide</div>')
     st.page_link("views/overview.py", label="Overview", icon=":material/apps:")
+    st.page_link("views/ask.py", label="Ask Tiresias", icon=":material/question_answer:")
     for category in ("The natural city", "The built city", "Everyday life"):
         st.html(f'<div class="nav-section">{category}</div>')
         for slug, (title, group, _) in TOPICS.items():

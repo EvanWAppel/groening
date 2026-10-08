@@ -1,0 +1,175 @@
+# Tiresias config for groening (Portland, OR open data). Engine:
+# github.com/EvanWAppel/tiresias, pinned in pyproject.toml / requirements.txt.
+# Check with `uv run tiresias check`; calibrate with `uv run tiresias calibrate`.
+city: Portland
+blurb: >-
+  crime, building permits, 311 service requests (graffiti and potholes), restaurant
+  inspections, short-term rentals, affordable housing, historic resources, park
+  and heritage trees, parks, bike network, transit routes and stops, weather, the
+  Willamette River, air quality, airport passenger traffic, marriages, and the
+  urban growth boundary
+warehouse: portland.duckdb
+dbt_target: target
+metrics: metrics.yml
+gold:
+  answers: evals/tiresias_gold.yaml
+  retrieval: evals/tiresias_retrieval_gold.yaml
+
+tables:
+  schemas: [main]
+  allowed:
+    - mart_air_quality_bad_days
+    - mart_air_quality_by_site
+    - mart_air_quality_monthly
+    - mart_bike_by_facility
+    - mart_bike_by_year
+    - mart_crime_by_hour_weekday
+    - mart_crime_by_type
+    - mart_crime_choropleth
+    - mart_crime_monthly
+    - mart_graffiti_resolution
+    - mart_heritage_by_species
+    - mart_heritage_by_year
+    - mart_heritage_map
+    - mart_heritage_summary
+    - mart_historic_by_decade
+    - mart_historic_by_rank
+    - mart_historic_by_style
+    - mart_historic_choropleth
+    - mart_historic_summary
+    - mart_housing_by_type
+    - mart_housing_by_year
+    - mart_housing_map
+    - mart_housing_summary
+    - mart_inspections_monthly
+    - mart_inspections_recent
+    - mart_inspections_score_dist
+    - mart_marriage_annual
+    - mart_parks
+    - mart_permits_by_type
+    - mart_permits_choropleth
+    - mart_permits_monthly
+    - mart_service_requests_choropleth
+    - mart_service_requests_monthly
+    - mart_service_requests_summary
+    - mart_short_term_rentals
+    - mart_tourism_annual
+    - mart_tourism_monthly
+    - mart_transit_by_mode
+    - mart_transit_routes
+    - mart_transit_stops_map
+    - mart_transit_summary
+    - mart_trees_by_species
+    - mart_trees_choropleth
+    - mart_trees_summary
+    - mart_ugb
+    - mart_weather_annual
+    - mart_weather_monthly
+    - mart_weather_wettest_days
+    - mart_willamette_daily
+    - mart_willamette_monthly
+  # Pipeline bookkeeping (table row counts, build time), not city data.
+  excluded:
+    - mart_build_metadata
+  # Polygon outlines and display colors drawn by the map pages.
+  map_only_columns:
+    mart_ugb: [boundary_json]
+    mart_crime_choropleth: [boundary_json]
+    mart_permits_choropleth: [boundary_json]
+    mart_historic_choropleth: [boundary_json]
+    mart_trees_choropleth: [boundary_json]
+    mart_service_requests_choropleth: [boundary_json]
+    mart_transit_routes: [route_color]
+
+examples:
+  - question: How many crimes were reported each month?
+    guidance: Use mart_crime_monthly (offense_count by month and crime_against); crime covers a rolling trailing 12 months.
+    grounds: [mart_crime_monthly]
+  - question: What are the most common types of crime?
+    guidance: Use mart_crime_by_type (offense_count by offense_group).
+    grounds: [mart_crime_by_type]
+  - question: Which neighborhoods have the most crime?
+    guidance: Use mart_crime_choropleth; select distinct neighborhood, n first, because a neighborhood with several polygons repeats its count.
+    grounds: [mart_crime_choropleth]
+  - question: How many building permits were issued and what were they worth?
+    guidance: Use mart_permits_monthly (permit_count, total_valuation by issue_month) or mart_permits_by_type (by work_class).
+    grounds: [mart_permits_monthly, mart_permits_by_type]
+  - question: How many graffiti and pothole reports are there?
+    guidance: Use mart_service_requests_summary (total_requests, open_requests, closed_requests by request_type); graffiti and potholes cover different time windows.
+    grounds: [mart_service_requests_summary]
+  - question: How are restaurant inspection scores distributed?
+    guidance: Use mart_inspections_score_dist (inspections by score_band) or mart_inspections_monthly (avg_score by month).
+    grounds: [mart_inspections_score_dist, mart_inspections_monthly]
+  - question: How many short-term rental permits are there?
+    guidance: Use mart_short_term_rentals (permit_type, permit_status); application_number can repeat, so count distinct application_number for applications.
+    grounds: [mart_short_term_rentals]
+  - question: How many affordable housing units have been built?
+    guidance: Use mart_housing_summary (total_units, regulated_units) or mart_housing_by_year.
+    grounds: [mart_housing_summary, mart_housing_by_year]
+  - question: Which architectural styles are most common among historic buildings?
+    guidance: Use mart_historic_by_style (resources by style).
+    grounds: [mart_historic_by_style]
+  - question: What are the most common heritage tree species?
+    guidance: Use mart_heritage_by_species (tree_count, avg_diameter_in by common_name).
+    grounds: [mart_heritage_by_species]
+  - question: What are the most common park tree species?
+    guidance: Use mart_trees_by_species (tree_count by common_name and genus; Parks Tree Inventory, not street trees); mart_trees_summary for totals and benefits.
+    grounds: [mart_trees_by_species, mart_trees_summary]
+  - question: How many miles of bike lanes are there by type?
+    guidance: Use mart_bike_by_facility (miles, segments by facility).
+    grounds: [mart_bike_by_facility]
+  - question: How many transit routes and stops are there?
+    guidance: Use mart_transit_summary (total_routes, total_stops) or mart_transit_by_mode.
+    grounds: [mart_transit_summary, mart_transit_by_mode]
+  - question: Which year had the most rain in Portland?
+    guidance: Use mart_weather_annual (total_precip_in, rainy_days by year).
+    grounds: [mart_weather_annual]
+  - question: How high does the Willamette River flow?
+    guidance: Use mart_willamette_monthly (avg_cfs, min_cfs, max_cfs by month) or mart_willamette_daily.
+    grounds: [mart_willamette_monthly, mart_willamette_daily]
+  - question: How many unhealthy air quality days were there each year?
+    guidance: Use mart_air_quality_bad_days (unhealthy_days by year and pollutant); do not sum across pollutants.
+    grounds: [mart_air_quality_bad_days]
+  - question: How many passengers flew through Portland's airport each year?
+    guidance: Use mart_tourism_annual (passengers by year); filter months_reported = 12 for complete years.
+    grounds: [mart_tourism_annual]
+  - question: How many marriages were there each year, and what share were same-sex?
+    guidance: Use mart_marriage_annual (total, same_sex, same_sex_pct by year); recent years may be preliminary.
+    grounds: [mart_marriage_annual]
+  - question: How big is the urban growth boundary?
+    guidance: Use mart_ugb (area_sqmi).
+    grounds: [mart_ugb]
+
+planner_notes:
+  - Choropleth tables (mart_*_choropleth) have one row per neighborhood polygon; a neighborhood with several polygons repeats the same n, so select distinct neighborhood, n (plus request_type in mart_service_requests_choropleth) before summing or ranking.
+  - Crime covers a rolling trailing 12 months; restaurant inspections a rolling ~6 months; potholes a rolling 12 months while graffiti runs from Sept 2022, so the two request types are not comparable.
+  - mart_weather_monthly.avg_precip_in is the mean DAILY rainfall, not a monthly total; mart_weather_wettest_days holds only the top 25 days.
+  - The latest year in mart_tourism_annual is partial; filter months_reported = 12 for full-year comparisons.
+  - Summing mart_air_quality_bad_days.unhealthy_days across pollutants double-counts days bad for both.
+  - Tree tables are the Parks Tree Inventory, not a citywide street-tree census; abstain or caveat street-tree questions.
+  - mart_bike_by_year.cumulative_miles counts only segments still active today, not the historical network size.
+
+grounding:
+  threshold: 0.62
+  calibration: >-
+    fastembed BAAI/bge-small-en-v1.5 on the draft gold set (2026-10-05): generic
+    off-topic 0.517-0.546 (schools, bitcoin, live traffic) and median rent 0.601;
+    answerable 0.697-0.866; subtle unanswerable (another city, out-of-window
+    crime, forecast) 0.661-0.686, inside the answerable band. 0.62 sits midway
+    between the generic band and the lowest answerable (~0.08 margin); the planner
+    refuses the subtle ones. Recalibrate after Evan reviews the gold set.
+
+limits:
+  max_rows: 1000
+  max_result_bytes: 256000
+  statement_timeout_s: 15
+  max_question_chars: 500
+  max_per_session: 15
+  max_per_day: 200
+
+chat:
+  example_questions:
+    - Which neighborhoods have the most crime?
+    - How many affordable housing units have been built?
+    - What are the most common heritage tree species?
+    - Which year had the most rain in Portland?

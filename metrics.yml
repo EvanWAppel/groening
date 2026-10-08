@@ -1,0 +1,4 @@
+# Governed metric registry for Tiresias. Empty for now: add canonical metrics here
+# (see the Tiresias README) as they are defined in the dbt models.
+version: 1
+metrics: []

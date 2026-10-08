@@ -5,332 +5,909 @@ version: 2
 # warehouse build before the app can read bad data. Keys asserted `unique` are
 # genuine one-row-per-key grains; month/year marts with a second dimension only get
 # `not_null`.
+#
+# Column descriptions are written for a text-to-SQL reader (Tiresias): grain, units,
+# what a count counts, coverage window, null semantics and caveats, all taken from
+# the mart/staging SQL, sources.yml, build_warehouse.py and city_config.py.
 
 models:
   - name: mart_permits_monthly
-    description: One row per calendar month of issued building permits.
+    description: >-
+      One row per calendar month of issued building permits. Source is the
+      PortlandMaps "Residential Building Permits" layer (residential permits only,
+      ~1995-present); permits with no issue date are excluded.
     columns:
       - name: issue_month
+        description: >-
+          First day of the calendar month the permit was issued (date_trunc of
+          ISSUEDATE). Primary key. The latest month may be partial.
         tests:
           - not_null
           - unique
+      - name: permit_count
+        description: Number of residential permits issued in the month (one source row per permit).
+      - name: total_valuation
+        description: >-
+          Sum of declared construction valuation (USD, nominal, not inflation-adjusted)
+          of permits issued in the month; permits with null valuation contribute nothing.
+      - name: avg_valuation
+        description: >-
+          Mean declared construction valuation (USD) per permit in the month, over permits
+          with a non-null valuation only, rounded to whole dollars.
+      - name: total_new_units
+        description: >-
+          Sum of NEW_UNITS (new dwelling units created) across permits issued in the
+          month; many permits (e.g. alterations) add 0 units and nulls are ignored.
 
   - name: mart_weather_annual
-    description: One row per year of PDX weather (NOAA GHCN-Daily).
+    description: >-
+      One row per year of PDX weather (NOAA GHCN-Daily). Station USW00024229 (Portland
+      International Airport) only; data starts 1938-04-01 and only years with more than
+      350 daily rows are kept, so incomplete years (typically 1938 and the current
+      year) are excluded.
     columns:
       - name: year
+        description: Calendar year of the observations. Primary key.
         tests:
           - not_null
           - unique
+      - name: total_precip_in
+        description: Total precipitation for the year in inches (sum of daily PRCP converted from tenths of mm), rounded to 2 decimals; days with missing precip add nothing.
+      - name: rainy_days
+        description: Number of days in the year with precipitation strictly greater than 0.01 inch.
+      - name: record_high_f
+        description: Highest daily maximum temperature in the year, degrees Fahrenheit (rounded to 0.1).
+      - name: record_low_f
+        description: Lowest daily minimum temperature in the year, degrees Fahrenheit (rounded to 0.1).
 
   - name: mart_marriage_annual
-    description: One row per year of Multnomah marriage counts.
+    description: >-
+      One row per year of Multnomah marriage counts. Oregon Health Authority aggregate
+      county statistics, 1995-present; the most recent years are preliminary. Years
+      with a null total are excluded.
     columns:
       - name: year
+        description: Calendar year of the marriages. Primary key.
         tests:
           - not_null
           - unique
+      - name: total
+        description: Total number of marriages OHA reports for Multnomah County that year.
+      - name: same_sex
+        description: >-
+          Number of those marriages that were same-sex (OHA "Same sex" column); null if
+          that year's sheet has no such column. Oregon legalized same-sex marriage in May 2014.
+      - name: same_sex_pct
+        description: 100 * same_sex / total, rounded to 1 decimal (a percentage, 0-100); null when total is 0 or same_sex is null.
+      - name: preliminary
+        description: True when the year's figures come from an OHA sheet marked preliminary (sheet name ending in 'p'); such counts may still be revised.
 
   - name: mart_tourism_annual
-    description: One row per year of PDX international passengers.
+    description: >-
+      One row per year of PDX international passengers (BTS International Report
+      Passengers, 1990-2025). The latest year may be partial: filter
+      months_reported = 12 for full-year comparisons.
     columns:
       - name: year
+        description: Calendar year. Primary key.
         tests:
           - not_null
           - unique
+      - name: passengers
+        description: Sum of monthly international passengers at PDX in the year (BTS "total" field). International traffic only; domestic passengers are not included.
+      - name: months_reported
+        description: Number of months (1-12) with a non-null passenger count in the year; less than 12 means a partial year.
 
   - name: mart_bike_by_year
-    description: One row per year bikeway was built.
+    description: >-
+      One row per year bikeway was built. Only currently active segments (YearRetired
+      null) with a length and a build year between 1970 and the current year; retired
+      segments and segments with no or out-of-range build year are excluded, so this is
+      not a historical network-size series.
     columns:
       - name: year_built
+        description: Year the bikeway segment was built (PBOT YearBuilt). Primary key.
         tests:
           - not_null
           - unique
+      - name: miles_built
+        description: Miles of still-active bikeway built that year (sum of LengthMiles), rounded to 0.1 mile.
+      - name: segments
+        description: Number of still-active bikeway segments built that year.
+      - name: cumulative_miles
+        description: >-
+          Running total of miles_built from the earliest year in this table (>= 1970)
+          through this year, rounded to 0.1. Approximates today's network by build year;
+          excludes retired and undated segments.
 
   - name: mart_inspections_monthly
-    description: One row per month of restaurant inspections (rolling window).
+    description: >-
+      One row per month of restaurant inspections (rolling window). Multnomah County
+      food-program inspections (restaurants, carts, warehouses) over a rolling ~6 months
+      ending at the last successful live fetch (a committed snapshot is used when the
+      live API is blocked); the first and last months are usually partial.
     columns:
       - name: month
+        description: First day of the calendar month of the inspection date. Primary key.
         tests:
           - not_null
           - unique
+      - name: inspections
+        description: Number of food-program inspections (all types, scored or not) in the month.
+      - name: scored
+        description: Number of those inspections that carry a 1-100 sanitation score (a raw score of 0 means non-scored and is excluded).
+      - name: avg_score
+        description: >-
+          Mean sanitation score (0-100 scale) over scored inspections in the month, rounded
+          to 1 decimal. To combine months, weight by scored: sum(avg_score*scored)/sum(scored).
 
   - name: mart_crime_monthly
-    description: One row per month x crime-against category.
+    description: >-
+      One row per month x crime-against category. Portland Police Bureau reported
+      offenses over a rolling trailing-12-month window, by reported date; the first and
+      last months are partial.
     columns:
       - name: month
+        description: First day of the calendar month the offense was reported (from REPORTED_DATETIME).
         tests:
           - not_null
       - name: crime_against
+        description: Crime-against category (PPB CategoryName; the source unions the Person, Property and Society layers).
         tests:
           - not_null
+      - name: offense_count
+        description: Number of reported offenses in the month and category (one source row per offense).
 
   - name: mart_air_quality_bad_days
-    description: One row per year x pollutant of unhealthy-air day counts.
+    description: >-
+      One row per year x pollutant of unhealthy-air day counts. EPA AQS daily data
+      for the Oregon tri-county metro (Multnomah, Washington, Clackamas), 2019-2024. A
+      day counts as unhealthy when the worst site AQI that day exceeds 100.
     columns:
       - name: year
+        description: Calendar year of the observation dates (2019-2024).
         tests:
           - not_null
       - name: pollutant
+        description: "'PM2.5' (24-hour average) or 'Ozone' (8-hour running average)."
         tests:
           - not_null
           - accepted_values:
               arguments:
                 values: ["Ozone", "PM2.5"]
+      - name: unhealthy_days
+        description: >-
+          Number of dates in the year on which the maximum daily AQI across all tri-county
+          monitors for this pollutant was > 100; 0 if none. A day bad for both pollutants
+          counts once per pollutant, so summing across pollutants can double count days.
 
   - name: mart_ugb
-    description: Single-row Urban Growth Boundary summary.
+    description: >-
+      Single-row Urban Growth Boundary summary. Metro's current dissolved UGB polygon
+      (no amendment history); mainly a map layer plus one area stat.
     columns:
       - name: area_sqmi
+        description: Area inside the Urban Growth Boundary in square miles (source AREA_ square feet / 27,878,400), rounded to 0.1.
         tests:
           - not_null
+      - name: boundary_json
+        description: >-
+          JSON array of [longitude, latitude] pairs (WGS84) for the boundary's largest
+          ring. Map-only geometry; not useful for SQL aggregation.
 
   - name: mart_trees_summary
-    description: Single-row street-tree inventory summary.
+    description: >-
+      Single-row tree inventory summary (trees in the Parks Tree Inventory, not a citywide street-tree census). Built from the PortlandMaps "Parks Tree
+      Inventory" layer (~25.7k inventoried trees), not a census of every tree in the city.
     columns:
       - name: total_trees
+        description: Number of inventoried trees (one source row per tree).
         tests:
           - not_null
+      - name: species_count
+        description: Count of distinct non-null common names among inventoried trees.
+      - name: carbon_storage_tons
+        description: Total carbon stored by inventoried trees in short tons (sum of Carbon_Storage_lb / 2000), rounded to whole tons; a modelled estimate.
+      - name: annual_benefits_usd
+        description: Sum of each tree's modelled total annual ecosystem benefits (Total_Annual_Benefits), US dollars per year, rounded to whole dollars.
+      - name: avg_dbh_in
+        description: Mean trunk diameter at breast height (DBH) in inches over trees with a DBH, rounded to 0.1.
 
   - name: mart_build_metadata
-    description: One row per loaded raw table — build provenance for the "Data as of" banner.
+    description: >-
+      One row per loaded raw table — build provenance for the "Data as of" banner.
+      Pipeline metadata, not city data; row_count is the raw (pre-staging) row count.
     columns:
       - name: table_name
+        description: Name of the raw.* source table (e.g. 'crime', 'weather'); matches city_config.SOURCES keys. Does not include build_metadata itself.
         tests:
           - not_null
           - unique
       - name: row_count
+        description: Number of rows in raw.<table_name> at build time, before any staging filters, so it can differ from mart counts.
         tests:
           - not_null
       - name: built_at
+        description: Timestamp of the warehouse build (stamped in UTC), shared by every row of one build.
         tests:
           - not_null
 
   - name: mart_transit_routes
-    description: One row per TriMet route.
+    description: >-
+      One row per TriMet route. From the current TriMet GTFS routes.txt (published
+      schedule, ~81 routes).
     columns:
       - name: route_id
+        description: GTFS route_id. Primary key.
         tests:
           - not_null
           - unique
+      - name: route_short_name
+        description: Public short name/number of the route (GTFS route_short_name); may be empty for some routes.
+      - name: route_long_name
+        description: Full descriptive route name (GTFS route_long_name).
       - name: mode
+        description: Mode label mapped from GTFS route_type ('MAX Light Rail', 'WES Commuter Rail', 'Bus', 'Streetcar', 'Aerial Tram', ... or 'Other').
         tests:
           - not_null
+      - name: route_color
+        description: GTFS route_color hex code; may be null. Display-only.
 
   - name: mart_transit_by_mode
     description: One row per transit mode with its route count.
     columns:
       - name: mode
+        description: Mode label mapped from GTFS route_type ('MAX Light Rail', 'WES Commuter Rail', 'Bus', 'Streetcar', 'Aerial Tram', ...). Primary key.
         tests:
           - not_null
           - unique
+      - name: route_count
+        description: Number of GTFS routes of this mode (routes, not trips or stops).
 
   - name: mart_transit_stops_map
-    description: One row per boardable transit stop (WGS84).
+    description: >-
+      One row per boardable transit stop (WGS84). TriMet GTFS stops with location_type
+      0 or blank and valid coordinates; stations and entrances are excluded.
     columns:
       - name: stop_id
+        description: GTFS stop_id. Primary key.
         tests:
           - not_null
           - unique
+      - name: stop_name
+        description: Stop name as published in GTFS.
+      - name: longitude
+        description: Stop longitude (WGS84 degrees).
+      - name: latitude
+        description: Stop latitude (WGS84 degrees).
 
   - name: mart_transit_summary
     description: Single-row transit headline summary.
     columns:
       - name: total_routes
+        description: Number of routes in TriMet GTFS routes.txt.
         tests:
           - not_null
+      - name: total_stops
+        description: Number of boardable stops (location_type 0/blank, with coordinates).
+      - name: total_modes
+        description: Number of distinct mode labels across routes.
 
   - name: mart_housing_by_year
-    description: One row per completion year of regulated affordable housing.
+    description: >-
+      One row per completion year of regulated affordable housing. Portland Housing
+      Bureau rental portfolio projects with a completion year after 1900; projects with
+      no completion year are excluded.
     columns:
       - name: year
+        description: Year the project was completed (Year_Complet). Primary key.
         tests:
           - not_null
           - unique
+      - name: projects
+        description: Number of portfolio projects completed that year.
+      - name: regulated_units
+        description: Sum of income-regulated (affordable) units in projects completed that year.
 
   - name: mart_housing_by_type
     description: One row per building type.
     columns:
       - name: building_type
+        description: Building type of the project as published; 'Unspecified' where blank. Primary key.
         tests:
           - not_null
           - unique
+      - name: projects
+        description: Number of portfolio projects of this building type (all years, including undated).
+      - name: regulated_units
+        description: Sum of income-regulated (affordable) units in projects of this building type.
 
   - name: mart_housing_summary
-    description: Single-row affordable-housing headline summary.
+    description: >-
+      Single-row affordable-housing headline summary over the Portland Housing Bureau
+      regulated rental portfolio to date (all projects).
     columns:
       - name: total_projects
+        description: Number of projects in the portfolio.
         tests:
           - not_null
+      - name: total_units
+        description: Sum of all housing units in portfolio projects (regulated plus any unregulated units).
+      - name: regulated_units
+        description: Sum of income-regulated (affordable) units in portfolio projects.
 
   - name: mart_housing_map
     description: One row per regulated affordable-housing project (WGS84).
     columns:
+      - name: project_name
+        description: Project name as published; not guaranteed unique.
+      - name: total_units
+        description: Total housing units in the project.
+      - name: regulated_units
+        description: Income-regulated (affordable) units in the project.
+      - name: longitude
+        description: Project longitude (WGS84 degrees).
       - name: latitude
+        description: Project latitude (WGS84 degrees).
         tests:
           - not_null
 
   - name: mart_heritage_by_year
-    description: One row per year of heritage-tree designations.
+    description: >-
+      One row per year of heritage-tree designations. Active (non-delisted)
+      designations only; years at or before 1900 and null years are excluded.
     columns:
       - name: year
+        description: Year the tree was designated a Heritage Tree. Primary key.
         tests:
           - not_null
           - unique
+      - name: designated
+        description: Number of currently active heritage trees designated that year (later-delisted trees are not counted).
 
   - name: mart_heritage_by_species
-    description: One row per heritage-tree species.
+    description: One row per heritage-tree species (active designations only).
     columns:
       - name: common_name
+        description: Species common name; 'Unknown' where blank. Primary key.
         tests:
           - not_null
           - unique
+      - name: tree_count
+        description: Number of active (non-delisted) heritage trees of this species.
+      - name: avg_diameter_in
+        description: Mean trunk diameter in inches of those trees (source DIAMETER cast to integer), rounded to 0.1.
 
   - name: mart_heritage_summary
-    description: Single-row heritage-tree headline summary.
+    description: >-
+      Single-row heritage-tree headline summary over active (non-delisted) City
+      heritage trees.
     columns:
       - name: total_trees
+        description: Number of active heritage trees.
         tests:
           - not_null
+      - name: species_count
+        description: Count of distinct common names (including 'Unknown').
+      - name: first_year
+        description: Earliest designation year among active trees; not range-filtered, unlike mart_heritage_by_year (which drops years <= 1900).
+      - name: max_diameter_in
+        description: Largest trunk diameter among active heritage trees, inches.
+      - name: native_pct
+        description: Percentage (0-100, rounded to whole number) of active heritage trees flagged native, among trees with a known native flag.
 
   - name: mart_heritage_map
     description: One row per active heritage tree (WGS84). TREEID is unreliable
       (nulls + duplicates upstream), so the map is keyed on coordinates, not id.
     columns:
+      - name: tree_id
+        description: Source TREEID cast to integer; unreliable (nulls and duplicates), do not use as a key.
+      - name: common_name
+        description: Species common name; 'Unknown' where blank.
+      - name: neighborhood
+        description: Neighborhood as recorded in the source attribute (not point-in-polygon tagged; may not match choropleth neighborhood names).
+      - name: diameter_in
+        description: Trunk diameter in inches; also used to size map points.
+      - name: longitude
+        description: Tree longitude (WGS84 degrees).
       - name: latitude
+        description: Tree latitude (WGS84 degrees).
         tests:
           - not_null
 
   - name: mart_historic_by_rank
-    description: One row per significance rank.
+    description: >-
+      One row per significance rank in the City Historic Resource Inventory (all
+      surveyed resources; no demolished filter is applied).
     columns:
       - name: significance_rank
+        description: "Inventory significance rank: 'I', 'II', 'III', 'designated', or 'unranked' where blank. Primary key."
         tests:
           - not_null
           - unique
+      - name: resources
+        description: Number of inventoried historic resources with this rank.
 
   - name: mart_historic_by_style
     description: One row per architectural style.
     columns:
       - name: style
+        description: Architectural style as recorded; 'Unspecified' where blank. Primary key.
         tests:
           - not_null
           - unique
+      - name: resources
+        description: Number of inventoried historic resources of this style.
 
   - name: mart_historic_by_decade
-    description: One row per decade built.
+    description: >-
+      One row per decade built. Only resources whose free-text year built parsed to a
+      4-digit year between 1800 and 2026.
     columns:
       - name: decade
+        description: Decade start year (e.g. 1900 means 1900-1909). Primary key.
         tests:
           - not_null
           - unique
+      - name: resources
+        description: Number of historic resources built in the decade.
 
   - name: mart_historic_summary
     description: Single-row historic-resources headline summary.
     columns:
       - name: total_resources
+        description: Number of resources in the Historic Resource Inventory (no demolished filter applied).
         tests:
           - not_null
+      - name: style_count
+        description: Count of distinct architectural styles (including 'Unspecified').
+      - name: oldest_year
+        description: Earliest parsed year built (bounded to 1800-2026).
+      - name: significant_count
+        description: Number of resources ranked 'I', 'II' or 'designated' (rank III and unranked excluded).
 
   # Choropleth marts: one row per neighborhood polygon (a name can span several
   # multipart polygons, so `neighborhood` is not unique), carrying the boundary
   # ring and a per-neighborhood count (0 where none) for the shaded map.
   - name: mart_crime_choropleth
-    description: Per-neighborhood reported-crime counts + boundary polygons.
+    description: >-
+      Per-neighborhood reported-crime counts + boundary polygons. One row per
+      neighborhood polygon; the count is joined by name, so a neighborhood with several
+      polygons repeats the same n on each row. Offenses outside every polygon are not
+      counted. Rolling trailing-12-month window.
     columns:
       - name: neighborhood
+        description: Portland neighborhood name (PortlandMaps Neighborhood Boundaries); not unique.
         tests:
           - not_null
       - name: boundary_json
+        description: JSON array of [longitude, latitude] pairs (WGS84) for the polygon's main ring. Map-only geometry.
         tests:
           - not_null
       - name: n
+        description: >-
+          Reported offenses whose point falls inside this neighborhood (point-in-polygon at
+          build time), 0 if none. Repeated on every polygon row of the same name, so use
+          SELECT DISTINCT neighborhood, n before summing.
         tests:
           - not_null
 
   - name: mart_permits_choropleth
-    description: Per-neighborhood building-permit counts + boundary polygons.
+    description: >-
+      Per-neighborhood building-permit counts + boundary polygons. One row per
+      neighborhood polygon; count joined by name (repeats across a name's polygons).
+      All residential permits in the source (~1995-present), not time-filtered.
     columns:
       - name: neighborhood
+        description: Portland neighborhood name (PortlandMaps Neighborhood Boundaries); not unique.
         tests:
           - not_null
       - name: boundary_json
+        description: JSON array of [longitude, latitude] pairs (WGS84) for the polygon's main ring. Map-only geometry.
         tests:
           - not_null
       - name: n
+        description: >-
+          Residential permits whose point falls inside this neighborhood (point-in-polygon at
+          build time), 0 if none. Repeated on every polygon row of the same name, so use
+          SELECT DISTINCT neighborhood, n before summing.
         tests:
           - not_null
 
   - name: mart_historic_choropleth
-    description: Per-neighborhood historic-resource counts + boundary polygons.
+    description: >-
+      Per-neighborhood historic-resource counts + boundary polygons. One row per
+      neighborhood polygon; count joined by name (repeats across a name's polygons).
     columns:
       - name: neighborhood
+        description: Portland neighborhood name (PortlandMaps Neighborhood Boundaries); not unique.
         tests:
           - not_null
       - name: boundary_json
+        description: JSON array of [longitude, latitude] pairs (WGS84) for the polygon's main ring. Map-only geometry.
         tests:
           - not_null
       - name: n
+        description: >-
+          Inventoried historic resources whose point falls inside this neighborhood
+          (point-in-polygon), 0 if none. Repeated on every polygon row of the same name, so
+          use SELECT DISTINCT neighborhood, n before summing.
         tests:
           - not_null
 
   - name: mart_trees_choropleth
-    description: Per-neighborhood inventoried-tree counts + boundary polygons.
+    description: >-
+      Per-neighborhood inventoried-tree counts + boundary polygons. One row per
+      neighborhood polygon; count joined by name (repeats across a name's polygons).
+      Covers only trees in the Parks Tree Inventory.
     columns:
       - name: neighborhood
+        description: Portland neighborhood name (PortlandMaps Neighborhood Boundaries); not unique.
         tests:
           - not_null
       - name: boundary_json
+        description: JSON array of [longitude, latitude] pairs (WGS84) for the polygon's main ring. Map-only geometry.
         tests:
           - not_null
       - name: n
+        description: >-
+          Inventoried trees whose point falls inside this neighborhood (point-in-polygon),
+          0 if none. Repeated on every polygon row of the same name, so use SELECT DISTINCT
+          neighborhood, n before summing.
         tests:
           - not_null
 
   # Service requests (E7b): graffiti + potholes unified by request_type.
   - name: mart_service_requests_summary
-    description: One headline row per request type (volume, open/closed, coverage).
+    description: >-
+      One headline row per request type (volume, open/closed, coverage). Coverage
+      differs by type: graffiti reports run Sept 2022-present, potholes only a rolling
+      12 months, so totals are not comparable across types.
     columns:
       - name: request_type
+        description: "'Graffiti' (BPS Graffiti Reports) or 'Pothole' (PBOT Pothole Repair Reports). Primary key."
         tests:
           - not_null
           - unique
           - accepted_values:
               values: ['Graffiti', 'Pothole']
       - name: total_requests
+        description: Number of requests of this type with a creation timestamp not in the future.
         tests:
           - not_null
+      - name: open_requests
+        description: Requests whose status normalized to 'Open' (raw new / open / pending / in progress) as of the build.
+      - name: closed_requests
+        description: Requests whose status normalized to 'Closed' (raw closed / solved) as of the build.
+      - name: first_date
+        description: Earliest request creation date for this type in the data.
+      - name: last_date
+        description: Latest request creation date for this type in the data.
 
   - name: mart_service_requests_monthly
-    description: One row per month x request type.
+    description: >-
+      One row per month x request type. Graffiti covers Sept 2022-present; potholes a
+      rolling 12 months, so pothole months before that window are absent, not zero.
     columns:
       - name: month
+        description: First day of the calendar month the request was created.
         tests:
           - not_null
       - name: request_type
+        description: "'Graffiti' or 'Pothole'."
         tests:
           - not_null
+      - name: request_count
+        description: Number of requests of this type created in the month.
 
   - name: mart_graffiti_resolution
-    description: Graffiti report counts by bucketed resolution outcome.
+    description: >-
+      Graffiti report counts by bucketed resolution outcome. Graffiti only (potholes
+      carry no resolution), Sept 2022-present.
     columns:
       - name: resolution
+        description: >-
+          Bucketed Graffiti_Status outcome: 'Cleaned by contractor', 'Cleaned by PBOT',
+          'Cleaned by property owner', 'Referred to another agency', 'Open / pending',
+          'Solved (other)', 'Other', or 'Not recorded' (null status detail). Primary key.
         tests:
           - not_null
           - unique
+      - name: request_count
+        description: Number of graffiti reports in this resolution bucket.
 
   - name: mart_service_requests_choropleth
-    description: Per-request-type, per-neighborhood counts + boundary polygons.
+    description: >-
+      Per-request-type, per-neighborhood counts + boundary polygons. Every
+      (request_type, neighborhood polygon) pair; count joined by name, so it repeats
+      across a name's polygons. Requests outside every polygon are not counted.
     columns:
       - name: request_type
+        description: "'Graffiti' or 'Pothole'."
         tests:
           - not_null
       - name: neighborhood
+        description: Portland neighborhood name (PortlandMaps Neighborhood Boundaries); not unique within a request_type.
         tests:
           - not_null
       - name: boundary_json
+        description: JSON array of [longitude, latitude] pairs (WGS84) for the polygon's main ring. Map-only geometry.
         tests:
           - not_null
       - name: n
+        description: >-
+          Requests of this type whose point falls inside this neighborhood (point-in-polygon
+          at build time), 0 if none. Repeated on every polygon row of the same name, so use
+          SELECT DISTINCT request_type, neighborhood, n before summing.
         tests:
           - not_null
+
+  # ---------------------------------------------------------------------------
+  # Marts without tests: documentation only (column meanings for text-to-SQL).
+  # ---------------------------------------------------------------------------
+  - name: mart_permits_by_type
+    description: >-
+      One row per permit work class (NEWCLASS, e.g. Alteration / New Construction /
+      Demolition) across all residential building permits in the source (~1995-present,
+      including permits with no issue date).
+    columns:
+      - name: work_class
+        description: Permit work class (raw NEWCLASS value); 'Unknown' where null. Primary key.
+      - name: permit_count
+        description: Number of residential permits with this work class over the whole source history.
+      - name: total_valuation
+        description: Sum of declared construction valuation (USD, nominal) for permits of this class; null valuations ignored.
+      - name: avg_valuation
+        description: Mean declared valuation (USD) per permit of this class over non-null valuations, rounded to whole dollars.
+
+  - name: mart_weather_monthly
+    description: >-
+      Calendar-month climatology at PDX: one row per month of the year (12 rows),
+      averaged over every daily observation from 1938-04-01 to the latest build
+      (including partial years). Not a time series; there is no year column.
+    columns:
+      - name: month_num
+        description: Month of year, 1 (January) to 12 (December). Primary key.
+      - name: month_name
+        description: English month name for month_num (e.g. 'January'); display label.
+      - name: avg_precip_in
+        description: >-
+          Mean DAILY precipitation in inches for this calendar month across all years (not
+          a monthly total; multiply by days in the month for an approximate monthly
+          total). Rounded to 3 decimals; days with missing precip are excluded from the mean.
+      - name: rainy_day_frac
+        description: >-
+          Fraction (0-1) of days in this calendar month with precipitation > 0.01 inch,
+          across all years. Days with missing precip count as not rainy. Rounded to 3 decimals.
+      - name: avg_tmax_f
+        description: Mean daily maximum temperature for this calendar month across all years, degrees Fahrenheit (rounded to 0.1).
+      - name: avg_tmin_f
+        description: Mean daily minimum temperature for this calendar month across all years, degrees Fahrenheit (rounded to 0.1).
+
+  - name: mart_weather_wettest_days
+    description: >-
+      The 25 rainiest single days at PDX since 1938-04-01, one row per day. A top-N
+      extract (LIMIT 25), not a daily series; do not aggregate it as if it covered all days.
+    columns:
+      - name: obs_date
+        description: Calendar date of the observation.
+      - name: precip_in
+        description: Precipitation that day in inches (converted from tenths of mm), rounded to 2 decimals.
+
+  - name: mart_tourism_monthly
+    description: >-
+      One row per month of PDX international passengers (BTS, 1990-2025); months with
+      null passengers are excluded. Shows the 2020 COVID collapse and recovery.
+    columns:
+      - name: month_date
+        description: First day of the month (date). One row per month.
+      - name: year
+        description: Calendar year of month_date.
+      - name: month
+        description: Month of year, 1-12.
+      - name: passengers
+        description: International passengers at PDX that month (BTS "total" field summed per year and month). Domestic traffic not included.
+
+  - name: mart_bike_by_facility
+    description: >-
+      One row per bikeway facility type with current active network mileage: segments
+      with YearRetired null and a non-null length, regardless of build year (the
+      Status field is not filtered).
+    columns:
+      - name: facility
+        description: PBOT bicycle facility-type code (raw "Facility" value, not decoded to a label); 'Unknown' where null. Primary key.
+      - name: miles
+        description: Total length in miles of active segments of this facility type (sum of LengthMiles), rounded to 0.1.
+      - name: segments
+        description: Number of active bikeway segments of this facility type.
+
+  - name: mart_inspections_recent
+    description: >-
+      The most recent inspection per food-facility permit (permitID) within the rolling
+      ~6-month inspection window: one row per permit inspected in the window (permit_id
+      itself is not output). Facilities not inspected in the window are absent. No
+      coordinates (address only).
+    columns:
+      - name: establishment_name
+        description: Name of the food establishment as published; not unique (chains and multi-permit sites repeat).
+      - name: address
+        description: Street address (address line 1 plus line 2 when present).
+      - name: city
+        description: City of the establishment address.
+      - name: zip
+        description: ZIP code of the establishment address.
+      - name: inspection_type
+        description: Inspection type of this latest inspection as published by MyHealthDepartment (raw value).
+      - name: permit_type
+        description: Food permit type of the facility as published (raw value, e.g. restaurant / mobile unit / warehouse categories).
+      - name: purpose
+        description: Purpose field of the inspection as published by MyHealthDepartment (raw value).
+      - name: inspection_date
+        description: Date of this facility's most recent inspection in the window.
+      - name: sanitation_score
+        description: Sanitation score 0-100 from that latest inspection; null for non-scored inspections or facilities (raw score 0).
+
+  - name: mart_inspections_score_dist
+    description: >-
+      Distribution of sanitation scores across all scored food inspections in the
+      rolling ~6-month window, one row per score band. Counts inspections, not
+      facilities (a facility inspected twice counts twice).
+    columns:
+      - name: score_band
+        description: "Score band label: '100', '95-99', '90-94', '80-89', '70-79', or '< 70'. Primary key."
+      - name: band_order
+        description: Sort key for score_band, 1 ('< 70', worst) to 6 ('100', best); display ordering only.
+      - name: inspections
+        description: Number of scored inspections whose sanitation score falls in the band.
+
+  - name: mart_crime_by_type
+    description: >-
+      One row per crime-against category x offense group: reported-offense counts over
+      the whole rolling trailing-12-month window (PPB).
+    columns:
+      - name: crime_against
+        description: Crime-against category (PPB CategoryName; the source unions the Person, Property and Society layers).
+      - name: offense_group
+        description: PPB offense group description (OffenseGroupDescription); 'Unknown' where null.
+      - name: offense_count
+        description: Number of reported offenses in this category and group over the 12-month window.
+
+  - name: mart_crime_by_hour_weekday
+    description: >-
+      One row per (weekday, hour of day) cell of the reported-crime heatmap, counting
+      reported offenses over the rolling trailing-12-month window. Times are when the
+      offense was reported, not when it occurred.
+    columns:
+      - name: reported_weekday
+        description: English day name of the reported timestamp ('Monday' ... 'Sunday'); sorts alphabetically, not by week order.
+      - name: reported_hour
+        description: >-
+          Hour of day 0-23 of the reported timestamp. REPORTED_DATETIME is converted from
+          ArcGIS epoch milliseconds with no time-zone conversion, so this is likely UTC
+          rather than Pacific local time.
+      - name: offense_count
+        description: Number of reported offenses in this weekday/hour cell over the 12-month window.
+
+  - name: mart_air_quality_monthly
+    description: >-
+      One row per month x pollutant of tri-county (Multnomah, Washington, Clackamas)
+      AQI from EPA AQS daily site data, 2019-2024.
+    columns:
+      - name: month
+        description: First day of the calendar month of the observation dates.
+      - name: pollutant
+        description: "'PM2.5' (24-hour average) or 'Ozone' (8-hour running average)."
+      - name: avg_aqi
+        description: Mean daily AQI over all site-days in the month for this pollutant (pooled across monitors, not a metro daily max), rounded to 1 decimal.
+      - name: max_aqi
+        description: Highest single site-day AQI in the month for this pollutant.
+
+  - name: mart_air_quality_by_site
+    description: >-
+      One row per county x monitor site name x pollutant, summarizing all EPA AQS daily
+      observations 2019-2024 that have an AQI and coordinates. Clackamas has Ozone but
+      no PM2.5 monitor.
+    columns:
+      - name: county
+        description: County name of the monitor (Multnomah, Washington or Clackamas).
+      - name: site_name
+        description: EPA AQS local site name of the monitor.
+      - name: pollutant
+        description: "'PM2.5' or 'Ozone'."
+      - name: avg_aqi
+        description: Mean daily AQI at this site for this pollutant over 2019-2024, rounded to 1 decimal.
+      - name: max_aqi
+        description: Highest daily AQI recorded at this site for this pollutant over 2019-2024.
+      - name: observations
+        description: Number of site-days with an AQI value (one observation per site, day and pollutant after deduplication).
+      - name: longitude
+        description: Monitor longitude (WGS84 degrees), averaged over its observations; for the map.
+      - name: latitude
+        description: Monitor latitude (WGS84 degrees), averaged over its observations; for the map.
+
+  - name: mart_parks
+    description: >-
+      One row per Portland Parks & Recreation park boundary polygon with a non-null
+      name (current inventory, ~316 parks), with acreage, a size class, and a centroid.
+    columns:
+      - name: name
+        description: Park name (NAME); not guaranteed unique.
+      - name: acres
+        description: Park area in acres as published (ACRES).
+      - name: size_class
+        description: >-
+          Acreage bucket label: '1 · Pocket (<1 ac)', '2 · Small (1–10 ac)',
+          '3 · Medium (10–50 ac)', '4 · Large (50+ ac)'. Parks with null acres also land
+          in the Large bucket (CASE else branch).
+      - name: longitude
+        description: Approximate park centroid longitude (WGS84), the vertex average of the polygon's first ring; for map points.
+      - name: latitude
+        description: Approximate park centroid latitude (WGS84), the vertex average of the polygon's first ring; for map points.
+      - name: has_valid_point
+        description: True when the centroid lies in the Portland-metro box (lon -124 to -122, lat 45 to 46); filter on it before mapping. Null if coordinates are null.
+
+  - name: mart_short_term_rentals
+    description: >-
+      One row per Accessory Short-Term Rental (ASTR) permit record in the City's current
+      registry (deduplicated on application number + IVR number), for the map, table
+      and breakdowns.
+    columns:
+      - name: application_number
+        description: City application/permit number for the short-term rental.
+      - name: address
+        description: Street address of the permitted rental.
+      - name: permit_type
+        description: "Permit type normalized to 'Type A' or 'Type B'; other raw values pass through and a null source value becomes 'Other'."
+      - name: permit_status
+        description: Permit status as published by the City (raw value); 'Unknown' where null.
+      - name: issued_date
+        description: Date the permit was issued; null if absent or unparseable.
+      - name: longitude
+        description: Longitude (WGS84) reprojected from the report's Web Mercator x coordinate.
+      - name: latitude
+        description: Latitude (WGS84) reprojected from the report's Web Mercator y coordinate.
+      - name: has_valid_point
+        description: True when the point lies in the Portland-metro box (lon -124 to -122, lat 45 to 46); filter on it before mapping. Null if coordinates are null.
+
+  - name: mart_trees_by_species
+    description: >-
+      One row per common name x genus in the Parks Tree Inventory, with tree count and
+      average size.
+    columns:
+      - name: common_name
+        description: Tree common name; 'Unknown' where null. Not unique on its own (grain is common_name + genus).
+      - name: genus
+        description: Botanical genus as published; may be null.
+      - name: native
+        description: Max of the source "Native" attribute across the group (raw text value, not a boolean); indicates whether the species is native.
+      - name: tree_count
+        description: Number of inventoried trees with this common name and genus.
+      - name: avg_dbh_in
+        description: Mean trunk diameter at breast height in inches for these trees, rounded to 0.1.
+
+  - name: mart_willamette_daily
+    description: >-
+      One row per day of USGS daily mean discharge for the Willamette River at
+      Portland (site 14211720, downtown, tidal), 1972-10-01 to the build date; no-data
+      days are excluded.
+    columns:
+      - name: obs_date
+        description: Calendar date of the daily value. One row per date.
+      - name: discharge_cfs
+        description: Daily mean discharge in cubic feet per second (cfs).
+      - name: provisional
+        description: True when USGS marks the value provisional ('P' qualifier); recent values are subject to revision.
+
+  - name: mart_willamette_monthly
+    description: >-
+      One row per calendar month of Willamette River discharge (site 14211720),
+      summarizing the daily means; the current month is partial.
+    columns:
+      - name: month
+        description: First day of the calendar month. One row per month.
+      - name: avg_cfs
+        description: Mean of the daily mean discharges in the month, cfs, rounded to whole cfs.
+      - name: min_cfs
+        description: Lowest daily mean discharge in the month, cfs.
+      - name: max_cfs
+        description: Highest daily mean discharge in the month, cfs (a daily mean, not an instantaneous peak).

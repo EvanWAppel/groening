@@ -1,0 +1,36 @@
+version: 1
+k: 3
+min_recall: 0.85
+cases:
+  - query: crime by offense type
+    expect_any: [mart_crime_by_type]
+  - query: crime by neighborhood
+    expect_any: [mart_crime_choropleth]
+  - query: building permit valuation
+    expect_any: [mart_permits_monthly, mart_permits_by_type]
+  - query: graffiti and pothole requests
+    expect_any: [mart_service_requests_summary, mart_service_requests_monthly, mart_graffiti_resolution]
+  - query: restaurant sanitation scores
+    expect_any: [mart_inspections_score_dist, mart_inspections_monthly, mart_inspections_recent]
+  - query: short-term rental permits
+    expect_any: [mart_short_term_rentals]
+  - query: affordable housing units
+    expect_any: [mart_housing_summary, mart_housing_by_year, mart_housing_by_type]
+  - query: historic building styles
+    expect_any: [mart_historic_by_style, mart_historic_summary]
+  - query: heritage trees
+    expect_any: [mart_heritage_by_species, mart_heritage_summary, mart_heritage_map]
+  - query: bike lane miles
+    expect_any: [mart_bike_by_facility, mart_bike_by_year]
+  - query: bus and light rail routes
+    expect_any: [mart_transit_by_mode, mart_transit_routes, mart_transit_summary]
+  - query: annual rainfall
+    expect_any: [mart_weather_annual]
+  - query: Willamette river flow
+    expect_any: [mart_willamette_monthly, mart_willamette_daily]
+  - query: airport passengers
+    expect_any: [mart_tourism_annual, mart_tourism_monthly]
+  - query: same-sex marriages
+    expect_any: [mart_marriage_annual]
+  - query: unhealthy air days
+    expect_any: [mart_air_quality_bad_days, mart_air_quality_monthly]
