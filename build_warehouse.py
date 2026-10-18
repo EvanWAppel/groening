@@ -689,6 +689,25 @@ def _normalize_requests(
     if unknown:
         raise ValueError(f"{request_type}: unmapped request status values {unknown}")
 
+    ids = df[id_col]
+    if ids.isna().any():
+        raise ValueError(f"{request_type}: {int(ids.isna().sum())} rows have a null {id_col}")
+    # A NaN anywhere upcasts an int id column to float; render 5001.0 as "5001".
+    if pd.api.types.is_float_dtype(ids) and (ids % 1 == 0).all():
+        ids = ids.astype("int64")
+
+    # Staging drops undated rows (and future-dated ones); say how many here so the
+    # loss is visible in the build log rather than silently shrinking the page.
+    undated = int(df[created_col].isna().sum())
+    if undated:
+        log.warning(
+            "%s: %d of %d rows have no %s and will be dropped in staging",
+            request_type,
+            undated,
+            len(df),
+            created_col,
+        )
+
     def _nullable(values) -> pd.Series:
         # Explicit object dtype so missing values stay Python None (SQL NULL);
         # pandas 3 would otherwise infer a str dtype and coerce None to NaN.
@@ -699,7 +718,7 @@ def _normalize_requests(
     return pd.DataFrame(
         {
             "request_type": request_type,
-            "request_id": df[id_col].astype(str),
+            "request_id": ids.astype(str),
             "status": status,
             "raw_status": raw_status,
             "resolution": _nullable(df[resolution_col] if resolution_col else [None] * len(df)),
