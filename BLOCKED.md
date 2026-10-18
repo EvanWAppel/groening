@@ -8,5 +8,5 @@ you anymore._
 
 - [ ] 🔴 **Dedicated, spend-capped Anthropic key for groening's Ask Tiresias page** — in the Anthropic Console create a separate workspace (e.g. `tiresias-groening`), set a monthly spend limit + alert (Elvis uses $10), mint a key there, and put it in `groening/.env` as `ANTHROPIC_API_KEY=…` (local live eval) and in Railway → groening → Variables (the page). Then tell Claude it is not your personal/default key. Until then the page shows a "needs a key" notice and the live gold eval can't run.
 - [ ] 🟡 **Review the Tiresias gold set and column-doc claims** — skim `evals/tiresias_gold.yaml` (25 drafted questions: are the "answer" ones answerable and the "abstain" ones not?) and check the 14 claims in `TIRESIAS.md` → "Column-doc claims to check against the data". Edit `models/marts/schema.yml` directly or note corrections for Claude.
-- [ ] 🔴 **Approve merging the `tiresias` PR** (merge = deploy on Railway). Safe before the key exists: without it the page only shows a notice.
+- [x] 🔴 **Approve merging the `tiresias` PR** (merged as PR #15 on 2026-10-08) (merge = deploy on Railway). Safe before the key exists: without it the page only shows a notice.
 
