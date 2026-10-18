@@ -45,3 +45,23 @@ class TestUnifyServiceRequests:
     def test_empty_layer_raises(self, graffiti_frame, potholes_frame):
         with pytest.raises(ValueError, match="Pothole"):
             unify_service_requests(graffiti_frame, potholes_frame.iloc[0:0])
+
+    def test_float_ids_from_a_nan_column_render_without_decimal(
+        self, graffiti_frame, potholes_frame
+    ):
+        # pandas upcasts an int id column to float once any value is NaN; the id
+        # must still read "5001", not "5001.0".
+        potholes_frame["ITEM_ID"] = potholes_frame["ITEM_ID"].astype(float)
+        out = unify_service_requests(graffiti_frame, potholes_frame)
+        assert out["request_id"].tolist()[-2:] == ["5001", "5002"]
+
+    def test_null_id_raises_rather_than_shipping_nan(self, graffiti_frame, potholes_frame):
+        graffiti_frame["Id"] = graffiti_frame["Id"].astype(object)
+        graffiti_frame.loc[1, "Id"] = None
+        with pytest.raises(ValueError, match="Graffiti.*null"):
+            unify_service_requests(graffiti_frame, potholes_frame)
+
+    def test_undated_rows_are_logged(self, graffiti_frame, potholes_frame, caplog):
+        with caplog.at_level("WARNING", logger="build_warehouse"):
+            unify_service_requests(graffiti_frame, potholes_frame)
+        assert any("Graffiti" in r.message and "1 of 3" in r.message for r in caplog.records)

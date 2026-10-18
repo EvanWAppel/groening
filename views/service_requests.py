@@ -21,6 +21,12 @@ type_scale = alt.Scale(domain=list(TYPE_COLORS), range=list(TYPE_COLORS.values()
 
 # --- KPIs ---
 summary = query("select * from main.mart_service_requests_summary").set_index("request_type")
+missing = sorted(set(TYPE_COLORS) - set(summary.index))
+if missing:
+    raise ValueError(
+        f"mart_service_requests_summary has no rows for {missing}; "
+        "the warehouse build dropped that request type — rebuild it"
+    )
 graffiti, pothole = summary.loc["Graffiti"], summary.loc["Pothole"]
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Graffiti reports", f"{int(graffiti['total_requests']):,}")
@@ -87,6 +93,17 @@ st.caption(
 hoods = query(
     "select request_type, neighborhood, boundary_json, n from main.mart_service_requests_choropleth"
 )
-neighborhood_choropleth(
-    hoods[hoods["request_type"] == kind], value_label="reports", accent=ACCENTS[kind]
-)
+kind_hoods = hoods[hoods["request_type"] == kind]
+neighborhood_choropleth(kind_hoods, value_label="reports", accent=ACCENTS[kind])
+# The map counts only reports inside a neighborhood polygon, so it can sum to less
+# than the KPI total above; say so rather than leave the gap unexplained. A
+# multi-polygon neighborhood repeats its full count on every polygon row, so
+# count each neighborhood once.
+mapped = int(kind_hoods.drop_duplicates("neighborhood")["n"].sum())
+unmapped = int(summary.loc[kind, "total_requests"]) - mapped
+if unmapped > 0:
+    st.caption(
+        f"{unmapped:,} {kind.lower()} reports fall outside every neighborhood "
+        "boundary (or have no location), so they count in the totals above but "
+        "not on the map."
+    )
