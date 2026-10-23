@@ -14,8 +14,7 @@ is parameterized: the same engine runs on Las Vegas
 ([Robbins](https://github.com/EvanWAppel/robbins)) data. Re-targeting to a new
 metro is one file, not a rewrite. See "The one-file city swap" below.
 
-**Live demo:** [groening-production.up.railway.app](https://groening-production.up.railway.app)
-(custom domain `groening.evanappel.me` pending). No login.
+**Live demo:** [groening.evanappel.me](https://groening.evanappel.me). No login.
 
 ## What this demonstrates
 

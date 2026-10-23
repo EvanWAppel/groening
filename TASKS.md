@@ -194,9 +194,9 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
   fallback; fail-fast on the first 403 would cut that).
 - [x] **DEPLOY-05** — `README.md` written (152 lines): what Groening is, the ELT +
   dbt + Streamlit story, local run steps, and the source list.
-- [~] **DEPLOY-06** *(optional, interview #7)* — DEFERRED (decision 2026-09-27).
-  Keep the Railway `*.up.railway.app` URL for now; revisit `groening.evanappel.me`
-  alongside broader portfolio-orchestrator work.
+- [x] **DEPLOY-06** *(optional, interview #7)* — deferred 2026-09-27; since wired:
+  `groening.evanappel.me` serves the app (HTTP 200, checked 2026-10-22). The Railway
+  origin URL still serves too.
 
 ---
 

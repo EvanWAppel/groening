@@ -158,3 +158,12 @@ lowest answerable question (rejected: 0.66+, which would refuse the subtle cases
 too but within ~0.03 of a real question). All 198 column docs written from code;
 14 unsure claims in `TIRESIAS.md`. `requires-python` narrowed to 3.12. Two
 mixed-case columns read as undocumented until Tiresias v0.1.1 (engine fix, PR #5).
+
+## 2026-10-22 — Custom domain is live; point the docs at it
+
+Supersedes DEPLOY-06's "deferred". `groening.evanappel.me` now serves the app (HTTP 200
+on `/` and page paths, checked 2026-10-22), so `README.md`, `models/exposures.yml` and
+`project.toml` use it as the canonical URL. The Railway origin
+`groening-production.up.railway.app` still serves; closing it is a separate
+`_system` task (`origin_urls_closed = false`). Rejected: keeping the Railway URL in the
+docs, which would advertise an address slated to close.
