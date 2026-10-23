@@ -1,0 +1,39 @@
+# Drafted by ~/Documents/_system on 2026-10-22; verified in groening's session 2026-10-22
+# (PLAT-REG-01). Format: _system/docs/project-toml.md
+
+[project]
+name = "groening"
+group = "portfolio/geographic"
+kind = "app"
+status = "active"
+repo = "EvanWAppel/groening"
+visibility = "public"
+on_site = true
+verified = true
+
+[deploy]
+host = "railway"
+services = ["groening"]       # Railway project "groening"; origin groening-production.up.railway.app
+domain = "groening.evanappel.me"
+origin_urls_closed = false  # groening-production.up.railway.app still serves (HTTP 200, 2026-10-22)
+
+[auth]
+scheme = "none"
+access_list = ""
+target = "cloudflare-access"   # planned first Railway pilot for Access (_system Phase 6)
+
+[data]
+db = "duckdb"
+
+[demo]
+status = "live"             # whole app is public
+url = "https://groening.evanappel.me/"
+path = "/"
+
+[keys]
+paid = ["anthropic"]        # Ask Tiresias page (via the tiresias library)
+isolated = "unknown"        # open in BLOCKED.md: dedicated, spend-capped key not yet set
+spend_cap = "unknown"
+
+[platform]
+done = ["PLAT-REG-01"]

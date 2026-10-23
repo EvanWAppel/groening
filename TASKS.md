@@ -353,3 +353,20 @@ feed is live and machine-readable before wiring; `log()` and drop if not.
 - **Finish:** Overview page, DEPLOY, docs.
 - **Phase 2:** PROVE first (fastest, highest signal) → MULTI (E5 comparison) →
   DATA / SERVE as capacity allows. Log the E5/E6 decisions before building.
+
+## Platform (handed off from _system)
+
+Tasks handed to this repo by `~/Documents/_system` (see its `CLAUDE.md`). Do them here, in
+groening's own session.
+
+- [x] **PLAT-REG-01 — Verify and commit `project.toml`** _(handed off 2026-10-22)_
+  - **Why:** `_system` builds the registry of every project from each repo's own
+    `project.toml` (replacing `portfolio/projects.toml`). `_system` drafted this repo's file
+    from the code and the reorg inventory; only this session can confirm it.
+  - **Do:** read `project.toml` against the code and the live deploy (`curl -sI` the domain;
+    Railway/Vercel dashboards for service names). Fix anything wrong. Unsure → write
+    `"unknown"` and add a `BLOCKED.md` item, never guess. Then set `verified = true`, add
+    `"PLAT-REG-01"` to `[platform] done`, and commit on a branch → PR.
+  - **Check:** `cd ~/Documents/_system && uv run sys registry` shows this repo as `ok` (or
+    `⚠ guardrail` if a paid key is still uncapped; that's a real open item, not a format error).
+  - Format reference: `~/Documents/_system/docs/project-toml.md`.
