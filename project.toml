@@ -32,8 +32,8 @@ path = "/"
 
 [keys]
 paid = ["anthropic"]        # Ask Tiresias page (via the tiresias library)
-isolated = "unknown"        # open in BLOCKED.md: dedicated, spend-capped key not yet set
-spend_cap = "unknown"
+isolated = "yes"            # dedicated `groening` Anthropic workspace key, on Railway; Evan confirmed not personal (2026-10-23)
+spend_cap = "yes"           # $10/month workspace cap + $5 email alert (Console, 2026-10-23)
 
 [platform]
 done = ["PLAT-REG-01"]

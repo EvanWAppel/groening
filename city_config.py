@@ -291,6 +291,10 @@ GTFS_MEMBERS = {
 PAGE_SIZE = 2000
 USER_AGENT = {"User-Agent": "Mozilla/5.0 (compatible; groening-data/1.0)"}
 
+# IANA zone for the metro's wall clock. ArcGIS dates arrive as UTC epoch ms;
+# fetch_layer converts them here so staging's local-time reading is correct.
+LOCAL_TZ = "America/Los_Angeles"
+
 # Municipal / clerk / health bulk files are frequently Windows-1252, not UTF-8.
 BULK_ENCODING = "cp1252"
 

@@ -18,7 +18,8 @@ uv run tiresias calibrate                # pick the grounding threshold
 ```
 
 The page needs `ANTHROPIC_API_KEY` from a dedicated, spend-capped workspace key;
-without it the page shows a notice and stops.
+without it the page shows a notice and stops. Production uses the `groening`
+Anthropic workspace key ($10/month cap, $5 alert), set in Railway Variables.
 
 ## Column-doc claims to check against the data
 

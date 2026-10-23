@@ -1,5 +1,7 @@
 """TDD for unifying the PortlandMaps service-request layers (E7b)."""
 
+import duckdb
+import pandas as pd
 import pytest
 
 from build_warehouse import SERVICE_REQUEST_COLUMNS, unify_service_requests
@@ -65,3 +67,79 @@ class TestUnifyServiceRequests:
         with caplog.at_level("WARNING", logger="build_warehouse"):
             unify_service_requests(graffiti_frame, potholes_frame)
         assert any("Graffiti" in r.message and "1 of 3" in r.message for r in caplog.records)
+
+
+class TestStgServiceRequests:
+    """stg_service_requests SQL run for real over a tiny raw.service_requests."""
+
+    @staticmethod
+    def _run(render_model, rows: list[dict], session_tz: str = "UTC") -> pd.DataFrame:
+        raw = pd.DataFrame(
+            [
+                {
+                    "request_type": "Graffiti",
+                    "request_id": str(i),
+                    "status": "Closed",
+                    "raw_status": "closed",
+                    "created_at": "2024-01-05 10:00:00",
+                    "hood_name": "Buckman",
+                    "longitude": -122.65,
+                    "latitude": 45.51,
+                }
+                | row
+                for i, row in enumerate(rows)
+            ]
+        )
+        con = duckdb.connect()
+        try:
+            # The build container (Railway) runs in UTC; pin it so the test does too.
+            con.execute(f"set TimeZone = '{session_tz}'")
+            con.execute("create schema raw")
+            con.register("raw_df", raw)
+            # An all-null pandas column has no type; the raw table holds text.
+            con.execute(
+                "create table raw.service_requests as "
+                "select * replace (resolution::varchar as resolution) from raw_df"
+            )
+            return con.execute(render_model("stg_service_requests")).df()
+        finally:
+            con.close()
+
+    def test_known_graffiti_outcomes_are_bucketed(self, render_model):
+        out = self._run(
+            render_model,
+            [
+                {"resolution": "Solved - Cleaned by contractor"},
+                {"resolution": None},
+                {"resolution": "Pending"},
+                {"request_type": "Pothole", "resolution": None},
+            ],
+        )
+        assert out["resolution"].tolist()[:3] == [
+            "Cleaned by contractor",
+            "Not recorded",
+            "Open / pending",
+        ]
+        assert pd.isna(out["resolution"].iloc[3])
+
+    def test_unmapped_graffiti_status_raises(self, render_model):
+        with pytest.raises(duckdb.Error, match="Unmapped graffiti status: Painted over by elves"):
+            self._run(render_model, [{"resolution": "Painted over by elves"}])
+
+    @pytest.mark.parametrize("session_tz", ["UTC", "America/Los_Angeles", "Asia/Tokyo"])
+    def test_future_cutoff_is_portland_wall_time(self, render_model, session_tz):
+        # created_at is Portland local time (fetch_layer converts), so a report
+        # from a few minutes ago must survive the "not in the future" filter
+        # wherever the build runs.
+        now_local = pd.Timestamp.now(tz="America/Los_Angeles").tz_localize(None)
+        recent = (now_local - pd.Timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
+        future = (now_local + pd.Timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S")
+        out = self._run(
+            render_model,
+            [
+                {"resolution": None, "created_at": recent},
+                {"resolution": None, "created_at": future},
+            ],
+            session_tz,
+        )
+        assert out["request_id"].tolist() == ["0"]

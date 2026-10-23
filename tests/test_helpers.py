@@ -374,3 +374,47 @@ class TestInspectionsSnapshotFallback:
         # API: the failed one, plus at most one in flight per pool worker.
         assert calls <= cfg.INSPECTIONS_CONCURRENCY + 1
         assert calls < n_windows
+
+
+class TestFetchLayerLocalTime:
+    """ArcGIS dates arrive as UTC epoch ms; fetch_layer emits Portland wall time.
+
+    Staging treats ``YYYY-MM-DD HH:MM:SS`` as local time, so a naive-UTC string
+    shifted evening reports into the next day / month (TASKS E7b-followups (1)).
+    """
+
+    @staticmethod
+    def _fetch(monkeypatch, epoch_ms: list[int | None]) -> pd.DataFrame:
+        meta = {
+            "maxRecordCount": 1000,
+            "fields": [{"name": "CreatedAt", "type": "esriFieldTypeDate"}],
+        }
+        page = {"features": [{"attributes": {"CreatedAt": ms}} for ms in epoch_ms]}
+        monkeypatch.setattr(
+            build_warehouse,
+            "_get_json",
+            lambda url, ctx=None: meta if url.endswith("?f=json") else page,
+        )
+        return build_warehouse.fetch_layer("https://example.test/MapServer/0")
+
+    @staticmethod
+    def _ms(iso_utc: str) -> int:
+        dt = datetime.datetime.fromisoformat(iso_utc).replace(tzinfo=datetime.UTC)
+        return int(dt.timestamp() * 1000)
+
+    def test_config_names_portland_time(self):
+        assert cfg.LOCAL_TZ == "America/Los_Angeles"
+
+    def test_winter_evening_stays_on_its_local_day_and_month(self, monkeypatch):
+        # 2024-02-01 03:30 UTC is 2024-01-31 19:30 PST (UTC-8).
+        out = self._fetch(monkeypatch, [self._ms("2024-02-01 03:30:00")])
+        assert out["CreatedAt"].tolist() == ["2024-01-31 19:30:00"]
+
+    def test_summer_uses_daylight_time(self, monkeypatch):
+        # 2024-07-01 12:00 UTC is 2024-07-01 05:00 PDT (UTC-7).
+        out = self._fetch(monkeypatch, [self._ms("2024-07-01 12:00:00")])
+        assert out["CreatedAt"].tolist() == ["2024-07-01 05:00:00"]
+
+    def test_missing_date_stays_missing(self, monkeypatch):
+        out = self._fetch(monkeypatch, [self._ms("2024-07-01 12:00:00"), None])
+        assert out["CreatedAt"].iloc[1] is None or pd.isna(out["CreatedAt"].iloc[1])

@@ -1,7 +1,10 @@
 -- Unified service requests (graffiti + potholes). created_at is normalized to a
--- "YYYY-MM-DD HH:MM:SS" string by fetch_layer; cast to timestamp and drop
--- undated / future-dated rows. Graffiti's free-text Graffiti_Status is bucketed
--- into a handful of resolution outcomes for the page (potholes carry none).
+-- "YYYY-MM-DD HH:MM:SS" Portland wall-clock string by fetch_layer; cast to
+-- timestamp and drop undated / future-dated rows (future = after Portland's
+-- current wall-clock time, whatever zone the build runs in). Graffiti's
+-- free-text Graffiti_Status is bucketed into a handful of resolution outcomes
+-- for the page (potholes carry none); an unmapped status fails the build rather
+-- than landing in a catch-all bucket.
 
 with source as (
     select * from {{ source('raw', 'service_requests') }}
@@ -36,7 +39,7 @@ select
         when lower(resolution_detail) like 'open%'
           or lower(resolution_detail) like 'pending%' then 'Open / pending'
         when lower(resolution_detail) like '%solved%' then 'Solved (other)'
-        else 'Other'
+        else error('Unmapped graffiti status: ' || resolution_detail)
     end                                     as resolution,
     resolution_detail,
     created_at,
@@ -46,4 +49,4 @@ select
     latitude
 from typed
 where created_at is not null
-  and created_at <= now()
+  and created_at <= timezone('America/Los_Angeles', now())

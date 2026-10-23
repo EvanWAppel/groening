@@ -55,6 +55,7 @@ socket.getaddrinfo = _ipv4_first  # ty: ignore[invalid-assignment]
 
 DB_PATH = Path(__file__).parent / "portland.duckdb"
 PAGE_SIZE = cfg.PAGE_SIZE
+LOCAL_TZ = cfg.LOCAL_TZ
 
 # Committed fallback for restaurant inspections. The MyHealthDepartment API 403s
 # datacenter/cloud egress IPs (Railway included), so the live fetch that works
@@ -162,7 +163,12 @@ def fetch_layer(
         if col in date_cols:
             s = df[col]
             if pd.api.types.is_numeric_dtype(s):
-                dt = pd.to_datetime(s, unit="ms", errors="coerce")
+                # Epoch ms are UTC instants; emit the city's wall-clock time.
+                dt = (
+                    pd.to_datetime(s, unit="ms", errors="coerce", utc=True)
+                    .dt.tz_convert(LOCAL_TZ)
+                    .dt.tz_localize(None)
+                )
             else:
                 dt = pd.to_datetime(s, errors="coerce")
             df[col] = dt.dt.strftime("%Y-%m-%d %H:%M:%S")

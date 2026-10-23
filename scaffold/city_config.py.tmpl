@@ -26,6 +26,11 @@ CITY_NAME = "__CITY__"
 PAGE_SIZE = 2000
 USER_AGENT = {"User-Agent": "Mozilla/5.0 (compatible; __CODENAME__-data/1.0)"}
 
+# IANA zone for the metro's wall clock (e.g. "America/Los_Angeles"). ArcGIS dates
+# arrive as UTC epoch ms; fetch_layer converts them into this zone. Set it before
+# wiring any dated source — staging reads those timestamps as local time.
+LOCAL_TZ = "UTC"
+
 # Municipal / clerk / health bulk files are frequently Windows-1252, not UTF-8.
 BULK_ENCODING = "cp1252"
 

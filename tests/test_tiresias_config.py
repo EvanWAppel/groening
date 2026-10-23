@@ -27,11 +27,10 @@ def built(config):
     return config
 
 
-def test_config_has_no_errors_against_the_artifacts(built):
-    # Errors only: on Tiresias v0.1.0 the mixed-case columns Neighborhood and
-    # Project_Name read as undocumented (fixed in v0.1.1); tighten to "no problems"
-    # after bumping the pin.
-    assert [p.message for p in check_config(built) if p.severity == "error"] == []
+def test_config_has_no_problems_against_the_artifacts(built):
+    # Errors and warnings alike: since Tiresias v0.1.1 the mixed-case columns
+    # (Neighborhood, Project_Name) resolve to their docs, so nothing is expected.
+    assert [f"{p.severity}: {p.message}" for p in check_config(built)] == []
 
 
 def test_every_built_mart_is_classified(built):

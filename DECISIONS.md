@@ -70,7 +70,7 @@ Four Phase 2 direction calls made by Evan in a decision review (agent-drafted, E
 
 ---
 
-## 2026-09-27 — Source license strings verified against publishers' actual terms
+## 2026-09-27 — Source license strings verified against publishers' actual terms (confirmed by Evan, blocker triage 2026-10-23)
 
 **Chose:** replace the descriptive municipal/state `license` strings in
 `city_config.SOURCES` with strings that cite each publisher's actual open-data
@@ -99,6 +99,10 @@ terms (researched 2026-09-27; DRY'd into `_LICENSE_*` constants).
 **Why:** the Sources & Methodology page is public-facing; accurate license
 provenance is part of the data-product story. Federal sources were already correct
 (U.S. public domain) and were left untouched.
+
+**Confirmed:** Evan approved this agent-drafted entry, including the three softer
+strings (TriMet GTFS, OHA marriages, Multnomah inspections), as written — Evan,
+blocker triage 2026-10-23.
 
 ---
 
@@ -192,3 +196,30 @@ afterwards don't reach it, which is the cost the 2026-09-27 scaffold-over-packag
 call accepted. Also: the generated `pyproject.toml` has empty dependencies (added
 with `uv add`, per house rules) and the stamped app leaves out Tiresias / the
 FastAPI layer, so it needs no key.
+
+---
+
+## 2026-10-23 — E7b follow-ups: Portland wall-clock timestamps; unmapped graffiti status fails the build
+
+Evan's calls on TASKS E7b-followups (1) and (2), taking the recommended option for
+each (agent-drafted, confirmed by Evan, blocker triage 2026-10-23).
+
+**(1) Chose:** convert ArcGIS dates to `America/Los_Angeles` once, in `fetch_layer`
+(zone in `city_config.LOCAL_TZ`), so every staging model that reads
+`YYYY-MM-DD HH:MM:SS` as local time is right. The "not in the future" filters in
+`stg_service_requests` and `stg_crime` compare against Portland's wall clock
+(`timezone('America/Los_Angeles', now())`), so the cutoff no longer depends on the
+build machine's zone. **Rejected:** keeping naive UTC and labelling it on the
+pages, which leaves evening reports in the wrong day/month bucket. **Trade-off:**
+every `fetch_layer` date column shifts 7–8 h earlier, so crime, permits and service
+request day/month counts move slightly at the edges on the next build. The
+scaffold's stub config gets `LOCAL_TZ = "UTC"` to be set per city.
+
+**(2) Chose:** an unmapped graffiti `Graffiti_Status` raises in
+`stg_service_requests` (`error('Unmapped graffiti status: …')`), matching the
+`unify_service_requests` rule for request status. **Rejected:** keeping a silent
+`'Other'` bucket with a log line. **Trade-off:** a new status value from BPS now
+fails `dbt build` (and so the deploy) until a bucket is added; that is the point,
+since a growing catch-all hides data drift. The `%referred%`-before-`open%` order was
+left as is; it was not part of this call.
+
