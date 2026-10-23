@@ -41,6 +41,13 @@ def test_every_built_mart_is_classified(built):
     assert marts == built.tables.allowed | built.tables.excluded
 
 
+def test_every_mart_model_is_classified(config):
+    # Same contract as above, checked from the model files so it runs without a
+    # dbt build: a new mart must be opted in or out of the agent's scope.
+    marts = {p.stem for p in (ROOT / "models" / "marts").glob("mart_*.sql")}
+    assert marts == config.tables.allowed | config.tables.excluded
+
+
 # AppTest's timeout bounds one script run. Generous so a heavily loaded machine
 # (parallel suites, builds) can't trip it; a hung page still fails, just later.
 ASK_PAGE_TIMEOUT_S = 120
