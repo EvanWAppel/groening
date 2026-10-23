@@ -168,8 +168,10 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
       scrape; RACC publishes no machine-readable geo feed.
 - [~] **TOPIC-fire** — DROPPED + logged. Only station/district polygons; no
       inspection or incident feed (matches interview drop-if-no-feed).
-- [~] **TOPIC-311** *(extra)* — HELD for Evan. No generic 311 feed; only row-level
-      option is illegal-campsite (homelessness) complaints — sensitive; ask first.
+- [x] **TOPIC-311** *(extra)* — resolved by **E7b** (2026-09-27). No generic 311
+      feed exists; built a **Service Requests** page from the non-sensitive BPS
+      Graffiti + PBOT Pothole report layers instead. The illegal-campsite
+      (homelessness) layers were ruled out as sensitive (logged in `DECISIONS.md`).
 - [x] **TOPIC-overview** — Overview landing page (`views/overview.py`, default page).
   Navigational hub: one headline metric per topic pulled from the marts, each tile
   linking to its page. All 13 queries verified against the warehouse; rendered
@@ -190,8 +192,11 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
   on mart grain keys, run by `dbt build` (19 tests, all pass).
 - [x] **DEPLOY-04** — Full Railway deploy with all kept topics; baked warehouse
   builds (dbt PASS=42) and the app serves. Build ~13 min end to end (the bulk is
-  source fetches plus ~3 min of inspections 403 retries before the snapshot
-  fallback; fail-fast on the first 403 would cut that).
+  source fetches plus, at the time, ~3 min of inspections 403 retries before the
+  snapshot fallback). Since fixed (c6a645a): `_fetch_inspections_live` cancels every
+  not-yet-started window on the first failed one and re-raises, so the build falls
+  back to the snapshot after one window's retries (`INSPECTIONS_RETRIES`=4, ~15 s of
+  backoff) instead of grinding all ~60 windows.
 - [x] **DEPLOY-05** — `README.md` written (152 lines): what Groening is, the ELT +
   dbt + Streamlit story, local run steps, and the source list.
 - [x] **DEPLOY-06** *(optional, interview #7)* — deferred 2026-09-27; since wired:
