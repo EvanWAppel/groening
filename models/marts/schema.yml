@@ -659,7 +659,9 @@ models:
         description: >-
           Bucketed Graffiti_Status outcome: 'Cleaned by contractor', 'Cleaned by PBOT',
           'Cleaned by property owner', 'Referred to another agency', 'Open / pending',
-          'Solved (other)', 'Other', or 'Not recorded' (null status detail). Primary key.
+          'Solved (other)', or 'Not recorded' (null status detail). Any other status
+          fails the build (stg_service_requests raises) rather than landing in a
+          catch-all bucket. Primary key.
         tests:
           - not_null
           - unique

@@ -1,6 +1,7 @@
 -- PPB reported crime (rolling 12-month window). REPORTED_DATETIME is normalized
--- to a "YYYY-MM-DD HH:MM:SS" string by fetch_layer; cast to timestamp and derive
--- hour / weekday for the time-pattern heatmap. Drop future-dated dirty rows.
+-- to a "YYYY-MM-DD HH:MM:SS" Portland wall-clock string by fetch_layer; cast to
+-- timestamp and derive hour / weekday for the time-pattern heatmap. Drop
+-- future-dated dirty rows (after Portland's current wall-clock time).
 
 with source as (
     select * from {{ source('raw', 'crime') }}
@@ -31,4 +32,4 @@ select
     latitude
 from typed
 where reported_at is not null
-  and reported_at <= now()
+  and reported_at <= timezone('America/Los_Angeles', now())

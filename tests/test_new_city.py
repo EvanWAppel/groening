@@ -129,6 +129,15 @@ class TestStubCityConfig:
         assert cfg.PAGE_SIZE > 0
         assert "robbins" in cfg.USER_AGENT["User-Agent"]
 
+    def test_stub_names_a_valid_wall_clock_zone(self, stamped):
+        # The stamped fetch_layer converts ArcGIS UTC dates into cfg.LOCAL_TZ.
+        from zoneinfo import ZoneInfo
+
+        cfg = _load(stamped / "city_config.py", "stub_city_config")
+        assert ZoneInfo(cfg.LOCAL_TZ)
+        bw = _load(stamped / "build_warehouse.py", "stub_build_warehouse")
+        assert bw.LOCAL_TZ == cfg.LOCAL_TZ
+
     def test_stub_catalog_contract_matches_groening(self, stamped):
         cfg = _load(stamped / "city_config.py", "stub_city_config")
         assert cfg.source_catalog_rows({}) == []

@@ -31,5 +31,5 @@ dev = [
 pythonpath = ["."]
 
 [tool.uv.sources]
-tiresias = { url = "https://github.com/EvanWAppel/tiresias/archive/bbb34d6d2ebf4c9da9b4d76d20b501470214211b.zip" }
+tiresias = { url = "https://github.com/EvanWAppel/tiresias/archive/0ae91238f19070d6453762dee831d110d0f2e5f9.zip" }
 

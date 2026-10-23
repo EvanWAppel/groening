@@ -8,7 +8,7 @@ schema tests and ~45 sampled docs all checked out.
 
 | # | Sev | Finding | Disposition |
 |---|-----|---------|-------------|
-| H1 | HIGH | Library: CTE-scope allowlist bypass (file / excluded-table reads) | **Fixed in Tiresias v0.1.1**; bump the pin here after it is tagged |
+| H1 | HIGH | Library: CTE-scope allowlist bypass (file / excluded-table reads) | **Fixed in Tiresias v0.1.1**; pin bumped to v0.1.1 on 2026-10-23 |
 | M1 | MED | Tree data is the Parks Tree Inventory, docs/config said street trees | **Fixed** (docs, blurb, example, planner note, gold wording) |
 | M2 | MED | No check catches config/artifact drift at deploy | **Fixed**: `RUN tiresias check` after `dbt docs generate` |
 | L1 | LOW | Embedding model downloads at first question | Open, as Elvis |

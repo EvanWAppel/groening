@@ -1,5 +1,7 @@
 """Shared pytest fixtures (DRY) for the Groening warehouse-build helpers."""
 
+import re
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -91,3 +93,21 @@ def potholes_frame():
             "latitude": [45.51, 45.48],
         }
     )
+
+
+MODELS = Path(__file__).resolve().parent.parent / "models"
+
+
+@pytest.fixture
+def render_model():
+    """Render a dbt model's SQL to plain DuckDB (``source``/``ref`` -> relation names)."""
+
+    def render(model: str) -> str:
+        sql = next(MODELS.rglob(f"{model}.sql")).read_text()
+        sql = re.sub(r"\{\{\s*config\(.*?\)\s*\}\}", "", sql, flags=re.DOTALL)
+        sql = re.sub(r"\{\{\s*source\('raw',\s*'(\w+)'\)\s*\}\}", r"raw.\1", sql)
+        sql = re.sub(r"\{\{\s*ref\('(\w+)'\)\s*\}\}", r"\1", sql)
+        assert "{{" not in sql, f"unrendered Jinja left in {model}"
+        return sql
+
+    return render

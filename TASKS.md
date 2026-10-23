@@ -313,14 +313,19 @@ feed is live and machine-readable before wiring; `log()` and drop if not.
   `models/staging/schema.yml` — (request_type, request_id) uniqueness (guards the
   unordered paged ArcGIS fetch double-counting), not_null id/status, status ∈
   {Open, Closed}. Remaining advisory findings → E7b-followups below.
-- [~] **E7b-followups — advisory review findings (not blocking).** 2026-10-17:
+- [x] **E7b-followups — advisory review findings (not blocking).** 2026-10-23:
+  (1) and (2) done per Evan's calls (blocker triage, see `DECISIONS.md`):
+  `fetch_layer` converts ArcGIS dates to `city_config.LOCAL_TZ`
+  (America/Los_Angeles) and the service-request + crime future-date cutoffs use
+  Portland's wall clock; an unmapped graffiti status now raises in
+  `stg_service_requests` (tested by running the model SQL in DuckDB). 2026-10-17:
   (3) done — null ids raise, float-upcast ids render as "5001"; (4) partly done —
   undated rows are logged at build time (future-dated rows still filtered silently,
   since that cutoff is tz-dependent, see 1); (5) done — page captions the reports
   outside every neighborhood (221 graffiti / 38 potholes on the 2026-10-05 build;
   note multi-polygon neighborhoods repeat their count per polygon row, so sum
   deduped); (6) done — named error when a type is missing from the summary.
-  Still open: (1) and (2) — both change data semantics, left for a deliberate call.
+  (1) and (2) were left for a deliberate call (made 2026-10-23, above).
   (1) `fetch_layer` emits naive UTC; staging treats it as local → evening reports
   shift a day / month, and `created_at <= now()` can drop the newest ~7h on a
   Pacific-time machine (likely shared with crime — fix once in `fetch_layer`).

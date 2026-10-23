@@ -550,7 +550,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=3.0.5" },
     { name = "pydeck", specifier = ">=0.9.3" },
     { name = "streamlit", specifier = ">=1.61.1" },
-    { name = "tiresias", extras = ["streamlit"], url = "https://github.com/EvanWAppel/tiresias/archive/bbb34d6d2ebf4c9da9b4d76d20b501470214211b.zip" },
+    { name = "tiresias", extras = ["streamlit"], url = "https://github.com/EvanWAppel/tiresias/archive/0ae91238f19070d6453762dee831d110d0f2e5f9.zip" },
     { name = "uvicorn", specifier = ">=0.52.1" },
 ]
 
@@ -1880,8 +1880,8 @@ wheels = [
 
 [[package]]
 name = "tiresias"
-version = "0.1.0"
-source = { url = "https://github.com/EvanWAppel/tiresias/archive/bbb34d6d2ebf4c9da9b4d76d20b501470214211b.zip" }
+version = "0.1.1"
+source = { url = "https://github.com/EvanWAppel/tiresias/archive/0ae91238f19070d6453762dee831d110d0f2e5f9.zip" }
 dependencies = [
     { name = "anthropic" },
     { name = "duckdb" },
@@ -1896,7 +1896,7 @@ dependencies = [
     { name = "rank-bm25" },
     { name = "sqlglot" },
 ]
-sdist = { hash = "sha256:b3c896791e47c004e96dcf8f8460cd22306fef2039e1513071353ce046732ce2" }
+sdist = { hash = "sha256:a97b46038554c67b63980e1f38b6adc68f60ea9a98d4554f60a05305bb0a7158" }
 
 [package.optional-dependencies]
 streamlit = [
