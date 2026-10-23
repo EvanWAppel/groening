@@ -1,0 +1,51 @@
+"""__CITY__ configuration — the one file that encodes *which city*.
+
+Stamped by the ``make new-city`` scaffold. Every city-specific value (ArcGIS
+service roots, EPA AQS FIPS codes, NOAA station, river gauge, year ranges, source
+URLs) belongs here; ``build_warehouse.py`` imports this module as ``cfg``.
+
+Fill-in order (see the scaffold guide, docs/new-city.md in the source repo):
+  1. Endpoint constants for one easy, verified source (the vertical slice).
+  2. A ``SOURCES`` entry for every raw table the build lands.
+  3. ``DROPPED_TOPICS`` for blueprint topics this metro does not publish openly.
+"""
+
+CITY_NAME = "__CITY__"
+
+# --------------------------------------------------------------------------- #
+# Endpoints — add one constant per verified source                             #
+# --------------------------------------------------------------------------- #
+# Example shapes (verify every URL before wiring it):
+#   PARKS_LAYER_URL = "https://<org>/arcgis/rest/services/<service>/MapServer/<n>"
+#   AQS_STATE = "<state FIPS>"; AQS_COUNTIES = ["<county FIPS>", ...]
+#   NOAA_STATION = "USW000xxxxx"   # GHCN-Daily station id for the main airport
+
+# --------------------------------------------------------------------------- #
+# Fetch tuning                                                                 #
+# --------------------------------------------------------------------------- #
+PAGE_SIZE = 2000
+USER_AGENT = {"User-Agent": "Mozilla/5.0 (compatible; __CODENAME__-data/1.0)"}
+
+# Municipal / clerk / health bulk files are frequently Windows-1252, not UTF-8.
+BULK_ENCODING = "cp1252"
+
+# --------------------------------------------------------------------------- #
+# Source catalog — provenance for every raw table                              #
+# --------------------------------------------------------------------------- #
+# One entry per raw table (key == the raw.* table name). Required fields:
+# title, page, publisher, url, coverage, grain, license. Example:
+#   "parks": {
+#       "title": "Parks", "page": "parks",
+#       "publisher": "<agency>", "url": PARKS_LAYER_URL,
+#       "coverage": "Current inventory",
+#       "grain": "One row per park; polygon reduced to a centroid.",
+#       "license": "<verified license string + URL>",
+#   },
+SOURCES: dict[str, dict] = {}
+
+# Blueprint topics this metro has no clean, machine-readable open feed for.
+# build_warehouse logs each one so a dropped topic never reads as "done".
+DROPPED_TOPICS: dict[str, str] = {}
+
+
+__CONFIG_HELPERS__

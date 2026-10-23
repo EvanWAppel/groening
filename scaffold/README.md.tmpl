@@ -1,0 +1,24 @@
+# __CODENAME__: __CITY__ open data
+
+An interactive **Streamlit** app over a **DuckDB** warehouse built with **dbt**,
+stamped from the `make new-city` scaffold. Every city-specific value lives in
+`city_config.py`; the fetch/load/provenance engine in `build_warehouse.py` is
+city-agnostic.
+
+## Getting started
+
+```sh
+uv sync   # first: uv add streamlit duckdb dbt-duckdb pandas pydeck altair openpyxl
+          #        uv add --dev pytest ruff ty prek pyyaml
+uv run python -m pytest -q
+```
+
+1. Verify one easy source, add its endpoint to `city_config.py`, a
+   `fetch_<topic>()` + `FETCHERS` entry in `build_warehouse.py`, and a
+   `SOURCES` entry.
+2. `uv run python build_warehouse.py && uv run dbt build --profiles-dir .`
+3. Add `models/staging/stg_<topic>.sql`, `models/marts/mart_<topic>.sql`, a
+   `views/<topic>.py` page, and register it in `streamlit_app.py`.
+4. `uv run streamlit run streamlit_app.py`
+
+The `__DB__.duckdb` file is a build artifact; it stays out of git.

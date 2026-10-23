@@ -1,0 +1,17 @@
+name: '__CODENAME__'
+version: '1.0.0'
+config-version: 2
+
+profile: '__CODENAME__'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+snapshot-paths: ["snapshots"]
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  __CODENAME__:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

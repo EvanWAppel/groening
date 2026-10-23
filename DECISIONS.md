@@ -167,3 +167,28 @@ on `/` and page paths, checked 2026-10-22), so `README.md`, `models/exposures.ym
 `groening-production.up.railway.app` still serves; closing it is a separate
 `_system` task (`origin_urls_closed = false`). Rejected: keeping the Railway URL in the
 docs, which would advertise an address slated to close.
+
+## 2026-10-24 — E6 scaffold copies the engine verbatim at stamp time (drafted by Claude, awaiting Evan's confirmation)
+
+**Chose:** `new_city.py` (behind `make new-city`) lifts the city-agnostic helpers
+(`fetch_layer`, `fetch_features`, `_centroid`, `_epoch_to_date`, `_urlopen`,
+`_ssl_ctx`, `_get_json`, IPv4-first, `load_raw`, build provenance) **out of
+Groening's own `build_warehouse.py` by name (AST source segments) at generation
+time**, and wraps them in a stub with an empty `FETCHERS` registry. A test asserts
+the stamped copies are byte-identical to Groening's. The rest of the skeleton
+(`city_config.py` stub, dbt project, one-page app, Dockerfile, catalog-contract
+test) comes from `scaffold/*.tmpl`. The stamped project is runnable: its own tests
+pass, and with one fake fetcher it builds the warehouse and passes `dbt build`.
+
+**Rejected:** (a) hand-maintained template copies of the helpers, which drift
+silently from the reference implementation; (b) copying all of Groening's
+`build_warehouse.py`, which drags in 18 Portland fetchers that won't import
+against a stub config; (c) refactoring the helpers into a shared module first,
+which would be a redesign ("architecture is identical to Elvis") and the start of
+the rejected package.
+
+**Trade-off:** a stamped project gets a *snapshot*. Engine fixes made in Groening
+afterwards don't reach it, which is the cost the 2026-09-27 scaffold-over-package
+call accepted. Also: the generated `pyproject.toml` has empty dependencies (added
+with `uv add`, per house rules) and the stamped app leaves out Tiresias / the
+FastAPI layer, so it needs no key.

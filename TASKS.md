@@ -168,8 +168,10 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
       scrape; RACC publishes no machine-readable geo feed.
 - [~] **TOPIC-fire** — DROPPED + logged. Only station/district polygons; no
       inspection or incident feed (matches interview drop-if-no-feed).
-- [~] **TOPIC-311** *(extra)* — HELD for Evan. No generic 311 feed; only row-level
-      option is illegal-campsite (homelessness) complaints — sensitive; ask first.
+- [x] **TOPIC-311** *(extra)* — resolved by **E7b** (2026-09-27). No generic 311
+      feed exists; built a **Service Requests** page from the non-sensitive BPS
+      Graffiti + PBOT Pothole report layers instead. The illegal-campsite
+      (homelessness) layers were ruled out as sensitive (logged in `DECISIONS.md`).
 - [x] **TOPIC-overview** — Overview landing page (`views/overview.py`, default page).
   Navigational hub: one headline metric per topic pulled from the marts, each tile
   linking to its page. All 13 queries verified against the warehouse; rendered
@@ -190,8 +192,11 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
   on mart grain keys, run by `dbt build` (19 tests, all pass).
 - [x] **DEPLOY-04** — Full Railway deploy with all kept topics; baked warehouse
   builds (dbt PASS=42) and the app serves. Build ~13 min end to end (the bulk is
-  source fetches plus ~3 min of inspections 403 retries before the snapshot
-  fallback; fail-fast on the first 403 would cut that).
+  source fetches plus, at the time, ~3 min of inspections 403 retries before the
+  snapshot fallback). Since fixed (c6a645a): `_fetch_inspections_live` cancels every
+  not-yet-started window on the first failed one and re-raises, so the build falls
+  back to the snapshot after one window's retries (`INSPECTIONS_RETRIES`=4, ~15 s of
+  backoff) instead of grinding all ~60 windows.
 - [x] **DEPLOY-05** — `README.md` written (152 lines): what Groening is, the ELT +
   dbt + Streamlit story, local run steps, and the source list.
 - [x] **DEPLOY-06** *(optional, interview #7)* — deferred 2026-09-27; since wired:
@@ -252,11 +257,18 @@ Groups PROVE items are largely independent (different files) — fan out safely.
   `DECISIONS.md`). Neither the in-Groening page nor a standalone "trilogy" app now;
   both need three warehouse artifacts co-located at build/deploy for a non-core
   feature. Revisit if the trilogy story becomes the headline.
-- [ ] **E6 — Extract the shared engine.** DECIDED (2026-09-27): **scaffold + guide**,
+- [x] **E6 — Extract the shared engine.** DECIDED (2026-09-27): **scaffold + guide**,
   NOT a pip package — a `make new-city` scaffold + "target a new metro" guide, with
   `city_config.py` as the per-city surface. Rejected the package (cross-repo
   versioning surface across Elvis/Groening/Robbins for apps that already work as
-  independent ports). Ready to build when picked up.
+  independent ports). **Built 2026-10-24:** `make new-city DEST=… CODENAME=… CITY=…
+  DB=…` → `new_city.py` stamps a runnable skeleton from `scaffold/*.tmpl` (stub
+  `city_config.py`, dbt project + build-provenance pair, one-page app, Dockerfile,
+  catalog-contract test) with the generic engine helpers copied verbatim from
+  `build_warehouse.py`. Guide: `docs/new-city.md`. TDD'd in `tests/test_new_city.py`
+  (stamps into `tmp_path`; stub imports, engine byte-identical, no Portland leaks,
+  stamped project ruff-clean and its own tests pass). Trade-off drafted in
+  `DECISIONS.md` for Evan to confirm. Elvis/Robbins untouched.
 
 ### Group DATA — Portland-specific expansion (breadth)
 
@@ -272,6 +284,18 @@ feed is live and machine-readable before wiring; `log()` and drop if not.
   `SOURCES` (2 entries → transit page), and a `transit_page` dbt exposure. Full
   dbt build green (34 models, 31 tests); 72 pytest · ruff · ty clean; pages execute
   in bare mode. Skipped trips.txt (67k rows) — a service-frequency view for later.
+- [x] **E7a-followup — transit service frequency** (2026-10-24 weekend). GTFS_MEMBERS
+  now also keeps trips.txt + calendar.txt → `raw.transit_trips` / `raw.transit_calendar`
+  (both in `SOURCES` → transit page; stop_times.txt not needed). `stg_transit_trips`,
+  `stg_transit_calendar` → `mart_transit_route_frequency`: scheduled trips per route
+  on one reference Wednesday / Saturday / Sunday (first on/after the build date,
+  clamped into the feed's range), counting only service_ids active that date, so
+  overlapping service periods aren't double counted. calendar_dates.txt (holiday
+  exceptions) not applied — documented in the mart + page caption. TDD'd: 10 pytest
+  tests incl. the mart SQL run in DuckDB over fixture raw tables. "Busiest routes"
+  bar (weekday/Sat/Sun toggle, top 20) on `views/transit.py`; exposure updated.
+  Verified on the live feed (82 routes; dbt build of the transit lineage green,
+  27 nodes; page runs clean in AppTest).
 - [x] **E7b — 311 / PDX service requests.** No generic 311 feed exists; built a
   **Service Requests** page from the two non-sensitive PortlandMaps request layers
   (verified live 2026-09-27): BPS **Graffiti Reports** (~49k, Sept 2022 – present)

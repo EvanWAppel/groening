@@ -107,6 +107,17 @@ sources:
           TriMet GTFS stops.txt (~6,027 stops): stop_id, stop_name, WGS84
           stop_lat/stop_lon, and location_type (0/blank = a boardable stop;
           1 = station, 2 = entrance — filtered out for the map in staging).
+      - name: transit_trips
+        description: >
+          TriMet GTFS trips.txt (~68k scheduled trips): trip_id, route_id,
+          service_id (joins transit_calendar), and direction_id. Counted per
+          route on a reference weekday/Saturday/Sunday for service frequency.
+      - name: transit_calendar
+        description: >
+          TriMet GTFS calendar.txt: one row per service_id with 0/1 flags for
+          each weekday and an inclusive YYYYMMDD start/end date. Decides which
+          trips run on a given date (holiday exceptions in calendar_dates.txt
+          are not loaded).
       - name: neighborhoods
         description: >
           PortlandMaps "Neighborhood Boundaries" (COP Open Data Boundary MapServer

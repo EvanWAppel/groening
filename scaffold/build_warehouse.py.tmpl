@@ -1,0 +1,101 @@
+"""Build the __CODENAME__ DuckDB warehouse from __CITY__ open data.
+
+Upstream sources feed the ``raw`` schema of ``__DB__.duckdb``; dbt then
+transforms it into staging views + mart tables. All city-specific endpoints live
+in ``city_config.py``.
+
+The helpers between the ENGINE markers are copied verbatim from the reference
+implementation by the ``make new-city`` scaffold — edit them there, not here, or
+accept that this copy diverges. Register each topic in ``FETCHERS`` below.
+
+Usage:
+    uv run python build_warehouse.py
+"""
+
+import datetime
+import json
+import logging
+import socket
+import ssl
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from collections.abc import Callable
+from pathlib import Path
+
+import duckdb
+import pandas as pd
+
+import city_config as cfg
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger("build_warehouse")
+
+# Some upstreams (notably aqs.epa.gov) advertise an AAAA record but have broken
+# IPv6, so a default connect hangs until timeout. Prefer IPv4 for all fetches.
+_orig_getaddrinfo = socket.getaddrinfo
+
+DB_PATH = Path(__file__).parent / "__DB__.duckdb"
+PAGE_SIZE = cfg.PAGE_SIZE
+DROPPED_TOPICS = cfg.DROPPED_TOPICS
+
+
+# --------------------------------------------------------------------------- #
+# ENGINE (verbatim copy) — generic fetch, load, and provenance helpers          #
+# --------------------------------------------------------------------------- #
+__ENGINE__
+
+
+# Deliberate monkeypatch: the signature intentionally differs from the stdlib
+# stub, so the type checker can't reconcile it.
+socket.getaddrinfo = _ipv4_first  # ty: ignore[invalid-assignment]
+# --------------------------------------------------------------------------- #
+# END ENGINE                                                                   #
+# --------------------------------------------------------------------------- #
+
+
+# --------------------------------------------------------------------------- #
+# Topic fetchers — one fetch_<topic>() per source, registered in FETCHERS       #
+# --------------------------------------------------------------------------- #
+# Example:
+#   def fetch_parks() -> pd.DataFrame:
+#       return fetch_layer(cfg.PARKS_LAYER_URL, centroid=True)
+#
+#   FETCHERS = {"parks": fetch_parks}
+FETCHERS: dict[str, Callable[[], pd.DataFrame]] = {}
+
+
+def main() -> None:
+    if not FETCHERS:
+        raise RuntimeError(
+            "No sources registered in FETCHERS — add a fetch_<topic>() for one "
+            "verified source (the vertical slice) before building the warehouse"
+        )
+    con = duckdb.connect(str(DB_PATH))
+    try:
+        for table, fetch in FETCHERS.items():
+            log.info("Fetching %s ...", table)
+            load_raw(con, table, fetch())
+
+        # Stamp build provenance from the tables that actually landed.
+        built_at = datetime.datetime.now(tz=datetime.UTC)
+        meta = collect_build_metadata(_raw_row_counts(con), built_at)
+        load_raw(con, "build_metadata", meta)
+        log.info(
+            "Build provenance: %d sources, %d total rows, built %s",
+            len(meta),
+            int(meta["row_count"].sum()),
+            built_at.isoformat(),
+        )
+    finally:
+        con.close()
+
+    for topic, reason in DROPPED_TOPICS.items():
+        log.warning("DROPPED topic %s: %s", topic, reason)
+
+    log.info("Warehouse build complete: %s", DB_PATH)
+
+
+if __name__ == "__main__":
+    main()

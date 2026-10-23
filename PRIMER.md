@@ -1,5 +1,84 @@
 # Groening — Handoff Primer
 
+## Next session — 2026-10-24 weekend
+
+> Written 2026-10-22 for a fresh Claude session working **unattended**. The rest of this
+> file below is the original 2026-08-11 build handoff (historical; the build is done).
+
+**Goal.** Groening is a Portland-metro open-data explorer (a port of Elvis/Las Vegas):
+`build_warehouse.py` → DuckDB `raw.*` → dbt staging/marts → Streamlit pages, baked at Docker
+build time and deployed on Railway at https://groening.evanappel.me.
+
+**Current state (main @ 7c88625).** v1 done (18 topic pages + Overview, Sources &
+Methodology, Service Requests, Transit, Housing, Ask Tiresias). Phase 2: E1–E4, E7a, E7b,
+E7d, E8 done; E5 deferred; E7c dropped; E6 decided (scaffold + guide) but unbuilt; E9 gated
+on the key guardrail. `project.toml` verified (PLAT-REG-01, PR #19). No open PRs; no unmerged
+local branches. No git-crypt paths.
+
+**Baseline (2026-10-22, on main).** `uv run python -m pytest -q` → 115 passed, 2 skipped,
+**2 failed under machine load** (both pass when re-run alone — timing flakes):
+`test_helpers.py::TestInspectionsSnapshotFallback::test_first_failure_cancels_remaining_windows`
+(thread race on `calls < n_windows`) and
+`test_tiresias_config.py::test_ask_page_without_a_key_shows_a_notice` (AppTest 30 s timeout).
+`uv run ruff check .` and `uv run ty check` clean.
+
+**Check command (every task):** `uv run python -m pytest -q && uv run ruff check . && uv run ty check`
+
+### Autonomous tasks, in order
+
+Work on branch `weekend-2026-10-24` (or a per-task branch off it). One PR per task; **open
+PRs, never merge, never deploy.**
+
+1. **FLAKE-01 — De-flake the two timing-sensitive tests** (no TASKS id; found 2026-10-22).
+   Make `test_first_failure_cancels_remaining_windows` deterministic (e.g. assert on the
+   cancellation mechanism, or gate the fake POST so the race can't let every window through)
+   and give the Ask-page AppTest a timeout that survives a loaded machine — without weakening
+   what each test proves. *Done:* full suite green 3× in a row, incl. once while another
+   heavy process runs.
+2. **E6 — `make new-city` scaffold + "target a new metro" guide** (TASKS E6, decided
+   2026-09-27: scaffold + guide, NOT a pip package). Scope it to this repo: a script/Make
+   target that stamps a fresh project skeleton with a stub `city_config.py` (the one
+   per-city surface), plus `docs/new-city.md`. TDD the generator (pytest: run it into
+   `tmp_path`, assert files + that the stub imports). Do not touch Elvis/Robbins. Log any
+   trade-off in `DECISIONS.md` as a *draft* entry for Evan to confirm. *Done:* tests green,
+   guide written, TASKS E6 ticked with a note.
+3. **TASKS hygiene** — TOPIC-311 still reads "HELD for Evan" though E7b resolved it; DEPLOY-04
+   mentions "fail-fast on the first 403 would cut that" — confirm in `build_warehouse.py`
+   (it now cancels after the first failure) and update the note. Docs only. *Done:* TASKS.md
+   matches the code.
+4. **E7a follow-up — transit service frequency (optional, only if 1–3 are done).** TASKS E7a
+   notes trips.txt was skipped "for later". TDD a `_parse_gtfs` extension for trips (+
+   stop_times only if needed), a `mart_transit_route_frequency`, and a chart on
+   `views/transit.py`; add a `SOURCES`/exposure update if a new raw table lands (a regression
+   test enforces every raw table is catalogued). The agent does not eyeball raw rows — assert
+   on shapes/counts in tests. *Done:* pytest/ruff/ty clean; `dbt build --profiles-dir .`
+   green if a local warehouse build is feasible (a full build fetches live sources, ~10 min).
+
+### House rules that matter (from CLAUDE.md)
+
+- Prime directive: if anything is unclear, **stop and record the question** (BLOCKED.md),
+  don't guess.
+- `uv` only; `uv add`/`uv add --dev` — never hand-edit `pyproject.toml` deps. `uv run python`.
+- **TDD with pytest**, fixtures in `tests/conftest.py`. Lint `ruff`, typecheck `ty`, `prek` hooks.
+- Use `logging`; never hide or wrap errors. A zero-row fetch raises.
+- Architecture is identical to Elvis — do not redesign. City-specific values only in `city_config.py`.
+- Never push to main. Trade-off decisions → draft `DECISIONS.md` entry for Evan to confirm.
+- Fan out only for ≥3 independent tasks, each in its own worktree.
+
+### Do NOT do
+
+- **No deploys, no merges** (merge to main = Railway deploy). No Railway/Cloudflare changes;
+  closing the Railway origin URL is a `_system` task.
+- **E9 (text-to-SQL) and anything needing an Anthropic key** — blocked on the dedicated,
+  spend-capped key (BLOCKED.md). Do not run the live Tiresias gold eval.
+- **E7b-followups (1) timezone and (2) graffiti CASE** — change data semantics; waiting on
+  Evan's call (BLOCKED.md).
+- **E5 cross-city comparison** (deferred) and **E8 deploy wiring** (needs deploy).
+- Reviewing the Tiresias gold set / column-doc claims and the license strings — Evan's review.
+- No browser automation; verify with tests/curl/logs. Never read `.env`.
+
+---
+
 > **Purpose:** Everything a fresh repo (and a fresh Claude session) needs to build
 > a Portland-metro clone of **Elvis**, Evan's Las Vegas open-data explorer.
 > **Owner:** Evan Appel · **Date:** 2026-08-11 · **Status:** Handoff v1

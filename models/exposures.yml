@@ -181,11 +181,12 @@ exposures:
     type: application
     maturity: high
     url: https://groening.evanappel.me/transit
-    description: TriMet routes by mode, a boardable-stops map, and the full route list.
+    description: TriMet routes by mode, service frequency per route, a boardable-stops map, and the full route list.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
       - ref('mart_transit_summary')
       - ref('mart_transit_by_mode')
+      - ref('mart_transit_route_frequency')
       - ref('mart_transit_routes')
       - ref('mart_transit_stops_map')
 

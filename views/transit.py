@@ -1,4 +1,4 @@
-"""TriMet transit — routes by mode and the stops that stitch the region together."""
+"""TriMet transit — routes by mode, how often they run, and the stops that stitch the region together."""
 
 import altair as alt
 import pydeck as pdk
@@ -40,6 +40,43 @@ mode_chart = (
 )
 st.altair_chart(mode_chart, width="stretch")
 
+# --- Service frequency ---
+st.subheader("Busiest routes")
+DAY_COLUMNS = {"Weekday": "weekday", "Saturday": "saturday", "Sunday": "sunday"}
+day = st.segmented_control(
+    "Day", list(DAY_COLUMNS), default="Weekday", label_visibility="collapsed"
+) or "Weekday"
+col = DAY_COLUMNS[day]
+freq = query(
+    # Some routes publish no short name (e.g. the tram); fall back to the long name.
+    "select coalesce(nullif(route_short_name, ''), route_long_name) as route, route_long_name, "
+    f"mode, {col}_trips as trips, {col}_date as ref_date from main.mart_transit_route_frequency"
+)
+ref_date = freq["ref_date"].iloc[0] if len(freq) else None
+running = freq[freq["trips"] > 0]
+top = running.sort_values("trips", ascending=False).head(20)
+if ref_date is not None:
+    st.caption(
+        f"Scheduled trips (both directions) per route on {ref_date:%A, %b %-d, %Y} "
+        f"— the top 20 of {len(running):,} routes running that day. "
+        "Counts the regular schedule; holiday exceptions aren't applied."
+    )
+freq_chart = (
+    alt.Chart(top)  # ty: ignore[unresolved-attribute]  (altair dynamic mark_* stubs)
+    .mark_bar(color="#4a6fa5")
+    .encode(
+        x=alt.X("trips:Q", title="Scheduled trips"),
+        y=alt.Y("route:N", sort="-x", title=None),
+        tooltip=[
+            alt.Tooltip("route:N", title="Route"),
+            alt.Tooltip("route_long_name:N", title="Name"),
+            alt.Tooltip("mode:N", title="Mode"),
+            alt.Tooltip("trips:Q", title="Trips", format=","),
+        ],
+    )
+)
+st.altair_chart(freq_chart, width="stretch")
+
 # --- Stops map ---
 st.subheader("Where you can board")
 st.caption("Every boardable TriMet stop, drawn flat — the shape of the network itself.")
@@ -77,4 +114,4 @@ st.dataframe(
         "mode": st.column_config.TextColumn("Mode"),
     },
 )
-st.caption("Source: TriMet GTFS static feed (routes.txt, stops.txt).")
+st.caption("Source: TriMet GTFS static feed (routes.txt, stops.txt, trips.txt, calendar.txt).")

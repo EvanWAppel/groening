@@ -1,0 +1,17 @@
+"""__CITY__'s public data — multi-page router."""
+
+import streamlit as st
+
+st.set_page_config(page_title="__CODENAME__ · __CITY__", layout="wide")
+
+pages = [
+    st.Page("views/overview.py", title="Overview", default=True),
+    # One st.Page per topic view as you add them, e.g.
+    # st.Page("views/parks.py", title="Parks"),
+]
+page = st.navigation(pages)
+
+with st.sidebar:
+    st.markdown("**__CODENAME__** · __CITY__ open data")
+
+page.run()

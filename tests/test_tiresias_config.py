@@ -41,11 +41,29 @@ def test_every_built_mart_is_classified(built):
     assert marts == built.tables.allowed | built.tables.excluded
 
 
+def test_every_mart_model_is_classified(config):
+    # Same contract as above, checked from the model files so it runs without a
+    # dbt build: a new mart must be opted in or out of the agent's scope.
+    marts = {p.stem for p in (ROOT / "models" / "marts").glob("mart_*.sql")}
+    assert marts == config.tables.allowed | config.tables.excluded
+
+
+# AppTest's timeout bounds one script run. Generous so a heavily loaded machine
+# (parallel suites, builds) can't trip it; a hung page still fails, just later.
+ASK_PAGE_TIMEOUT_S = 120
+
+
 def test_ask_page_without_a_key_shows_a_notice(monkeypatch):
+    # The page's cold import of tiresias.chat (langgraph, anthropic) dominates its
+    # run time and balloons under load. AppTest runs the script in this process,
+    # so import it up front: the timed run then measures the page, not imports.
+    import tiresias.chat  # noqa: F401
     from streamlit.testing.v1 import AppTest
 
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    at = AppTest.from_file(str(ROOT / "views" / "ask.py"), default_timeout=30).run()
+    at = AppTest.from_file(
+        str(ROOT / "views" / "ask.py"), default_timeout=ASK_PAGE_TIMEOUT_S
+    ).run()
     assert not at.exception
     assert "Portland" in at.title[0].value
     assert "ANTHROPIC_API_KEY" in at.info[0].value

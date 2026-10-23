@@ -56,6 +56,7 @@ tables:
     - mart_tourism_annual
     - mart_tourism_monthly
     - mart_transit_by_mode
+    - mart_transit_route_frequency
     - mart_transit_routes
     - mart_transit_stops_map
     - mart_transit_summary
@@ -80,6 +81,7 @@ tables:
     mart_trees_choropleth: [boundary_json]
     mart_service_requests_choropleth: [boundary_json]
     mart_transit_routes: [route_color]
+    mart_transit_route_frequency: [route_color]
 
 examples:
   - question: How many crimes were reported each month?
