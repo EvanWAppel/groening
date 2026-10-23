@@ -85,6 +85,11 @@ terms (researched 2026-09-27; DRY'd into `_LICENSE_*` constants).
   share-alike**, confirmed in the UGB layer's own metadata ("Use Constraints: …
   RLIS Open Database End User License Agreement"). HIGH that it's the open license;
   MEDIUM on the bare "ODbL" label, so the string says "ODbL-style" + the URL.
+  _2026-10-23:_ the UGB source moved to the official `OregonMetro.RLIS` ArcGIS Online
+  layer (`services2.arcgis.com/McQ0OlIABe29rJJy/.../Urban_Growth_Boundary_UGB`,
+  item `e3a9453a1ce547a7b2ee4baac037540e`) after the old Metro DRC layer was retired.
+  Its item `licenseInfo` names the same RLIS Open Database EULA, so the license
+  string is unchanged.
 
 **Softer strings (flagged for Evan):**
 - **TriMet GTFS** — the static feed is keyless/openly published, but TriMet stamps
