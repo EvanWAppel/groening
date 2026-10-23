@@ -1,0 +1,24 @@
+"""Contract tests for the city_config source catalog (stamped by the scaffold)."""
+
+import pytest
+
+import build_warehouse
+import city_config as cfg
+
+REQUIRED_FIELDS = {"title", "page", "publisher", "url", "coverage", "grain", "license"}
+
+
+def test_every_catalog_entry_has_the_required_fields():
+    for table, meta in cfg.SOURCES.items():
+        missing = REQUIRED_FIELDS - set(meta)
+        assert not missing, f"{table} missing {missing}"
+        assert all(str(meta[f]).strip() for f in REQUIRED_FIELDS), table
+
+
+def test_every_registered_fetcher_is_catalogued():
+    assert set(build_warehouse.FETCHERS) <= set(cfg.SOURCES)
+
+
+def test_an_undocumented_raw_table_raises():
+    with pytest.raises(KeyError):
+        cfg.source_catalog_rows({"undocumented_table": 1})

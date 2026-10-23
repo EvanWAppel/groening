@@ -1,0 +1,12 @@
+[project]
+name = "__CODENAME__"
+version = "0.1.0"
+description = "__CITY__ open-data explorer: DuckDB + dbt + Streamlit"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+# Add dependencies with `uv add` (see README), never by hand.
+dependencies = []
+
+[tool.pytest.ini_options]
+# Tests import top-level modules (build_warehouse, city_config) by name.
+pythonpath = ["."]

@@ -252,11 +252,18 @@ Groups PROVE items are largely independent (different files) — fan out safely.
   `DECISIONS.md`). Neither the in-Groening page nor a standalone "trilogy" app now;
   both need three warehouse artifacts co-located at build/deploy for a non-core
   feature. Revisit if the trilogy story becomes the headline.
-- [ ] **E6 — Extract the shared engine.** DECIDED (2026-09-27): **scaffold + guide**,
+- [x] **E6 — Extract the shared engine.** DECIDED (2026-09-27): **scaffold + guide**,
   NOT a pip package — a `make new-city` scaffold + "target a new metro" guide, with
   `city_config.py` as the per-city surface. Rejected the package (cross-repo
   versioning surface across Elvis/Groening/Robbins for apps that already work as
-  independent ports). Ready to build when picked up.
+  independent ports). **Built 2026-10-24:** `make new-city DEST=… CODENAME=… CITY=…
+  DB=…` → `new_city.py` stamps a runnable skeleton from `scaffold/*.tmpl` (stub
+  `city_config.py`, dbt project + build-provenance pair, one-page app, Dockerfile,
+  catalog-contract test) with the generic engine helpers copied verbatim from
+  `build_warehouse.py`. Guide: `docs/new-city.md`. TDD'd in `tests/test_new_city.py`
+  (stamps into `tmp_path`; stub imports, engine byte-identical, no Portland leaks,
+  stamped project ruff-clean and its own tests pass). Trade-off drafted in
+  `DECISIONS.md` for Evan to confirm. Elvis/Robbins untouched.
 
 ### Group DATA — Portland-specific expansion (breadth)
 

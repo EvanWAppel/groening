@@ -1,0 +1,22 @@
+"""Overview: build provenance and the source catalog for __CITY__."""
+
+import pandas as pd
+import streamlit as st
+
+import city_config as cfg
+from app_db import query
+
+st.title(f"{cfg.CITY_NAME}, by the numbers")
+
+meta = query(
+    "select table_name, row_count, built_at from main.mart_build_metadata "
+    "order by table_name"
+)
+st.caption(
+    f"Data as of {meta['built_at'].max():%Y-%m-%d} · {len(meta)} sources · "
+    f"{int(meta['row_count'].sum()):,} rows"
+)
+st.dataframe(meta, hide_index=True)
+
+st.subheader("Sources")
+st.dataframe(pd.DataFrame(cfg.source_catalog_rows(dict(meta[["table_name", "row_count"]].values))))

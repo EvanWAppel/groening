@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: raw
+    database: __DB__
+    schema: raw
+    tables:
+      # One entry per raw table build_warehouse.py lands (keep in sync with
+      # city_config.SOURCES), each with a description of its grain.
+      - name: build_metadata
+        description: >
+          Build provenance stamped by build_warehouse.py after every source
+          lands: one row per loaded raw table (table_name, row_count) with a
+          shared ISO build timestamp (built_at).
