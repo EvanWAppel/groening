@@ -31,7 +31,7 @@ select
     raw_status,
     case
         when request_type <> 'Graffiti' then null
-        when resolution_detail is null then 'Not recorded'
+        when nullif(trim(resolution_detail), '') is null then 'Not recorded'
         when lower(resolution_detail) like '%cleaned by contractor%' then 'Cleaned by contractor'
         when lower(resolution_detail) like '%cleaned by pbot%' then 'Cleaned by PBOT'
         when lower(resolution_detail) like '%cleaned by property owner%' then 'Cleaned by property owner'

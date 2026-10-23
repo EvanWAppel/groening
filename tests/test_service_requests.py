@@ -122,6 +122,13 @@ class TestStgServiceRequests:
         ]
         assert pd.isna(out["resolution"].iloc[3])
 
+    @pytest.mark.parametrize("blank", ["", "   "])
+    def test_blank_graffiti_status_is_not_recorded(self, render_model, blank):
+        # The live feed sends empty strings as well as nulls; neither is a new
+        # category, so both land in "Not recorded" instead of failing the build.
+        out = self._run(render_model, [{"resolution": blank}])
+        assert out["resolution"].tolist() == ["Not recorded"]
+
     def test_unmapped_graffiti_status_raises(self, render_model):
         with pytest.raises(duckdb.Error, match="Unmapped graffiti status: Painted over by elves"):
             self._run(render_model, [{"resolution": "Painted over by elves"}])
