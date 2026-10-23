@@ -9,7 +9,7 @@ exposures:
     label: "Page: Overview"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/
+    url: https://groening.evanappel.me/
     description: Landing page — one headline metric per topic, read from every mart.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -35,7 +35,7 @@ exposures:
     label: "Page: Building Permits"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/building_permits
+    url: https://groening.evanappel.me/building_permits
     description: Building-permit KPIs, time series, work-class bars, and a per-neighborhood choropleth.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -47,7 +47,7 @@ exposures:
     label: "Page: Parks"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/parks
+    url: https://groening.evanappel.me/parks
     description: Park acreage and locations.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -57,7 +57,7 @@ exposures:
     label: "Page: Reported Crime"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/crime
+    url: https://groening.evanappel.me/crime
     description: Reported crime by type, an hour x weekday heatmap, and a per-neighborhood choropleth.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -69,7 +69,7 @@ exposures:
     label: "Page: Short-Term Rentals"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/short_term_rentals
+    url: https://groening.evanappel.me/short_term_rentals
     description: Registered short-term-rental permits.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -79,7 +79,7 @@ exposures:
     label: "Page: Restaurant Inspections"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/restaurant_inspections
+    url: https://groening.evanappel.me/restaurant_inspections
     description: Sanitation-score distribution, monthly volume, and recent inspections.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -91,7 +91,7 @@ exposures:
     label: "Page: Willamette River"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/willamette
+    url: https://groening.evanappel.me/willamette
     description: Willamette River discharge — daily series and monthly averages.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -102,7 +102,7 @@ exposures:
     label: "Page: Rain & Records"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/weather
+    url: https://groening.evanappel.me/weather
     description: PDX rainfall and temperature — annual, monthly, and wettest days.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -114,7 +114,7 @@ exposures:
     label: "Page: Air Quality"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/air_quality
+    url: https://groening.evanappel.me/air_quality
     description: PM2.5 / Ozone trends, unhealthy-air days, and per-site readings.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -126,7 +126,7 @@ exposures:
     label: "Page: Trees"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/trees
+    url: https://groening.evanappel.me/trees
     description: Street-tree inventory — species mix, benefits summary, and a per-neighborhood choropleth.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -138,7 +138,7 @@ exposures:
     label: "Page: Bike Network"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/bike
+    url: https://groening.evanappel.me/bike
     description: Bikeway miles built per year and by facility type.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -149,7 +149,7 @@ exposures:
     label: "Page: Air Travel"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/tourism
+    url: https://groening.evanappel.me/tourism
     description: PDX international passenger volumes — annual and monthly.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -160,7 +160,7 @@ exposures:
     label: "Page: Marriages"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/marriage
+    url: https://groening.evanappel.me/marriage
     description: Multnomah County marriage counts by year.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -170,7 +170,7 @@ exposures:
     label: "Page: Urban Growth Boundary"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/ugb
+    url: https://groening.evanappel.me/ugb
     description: Metro Urban Growth Boundary area and boundary map.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -180,7 +180,7 @@ exposures:
     label: "Page: Transit"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/transit
+    url: https://groening.evanappel.me/transit
     description: TriMet routes by mode, a boardable-stops map, and the full route list.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -193,7 +193,7 @@ exposures:
     label: "Page: Affordable Housing"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/housing
+    url: https://groening.evanappel.me/housing
     description: Regulated affordable-housing portfolio — units by year, by type, and a map.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -206,7 +206,7 @@ exposures:
     label: "Page: Heritage Trees"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/heritage_trees
+    url: https://groening.evanappel.me/heritage_trees
     description: Designated heritage trees — designations by year, top species, and a map.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -219,7 +219,7 @@ exposures:
     label: "Page: Historic Resources"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/historic
+    url: https://groening.evanappel.me/historic
     description: Historic Resource Inventory — by decade built, style, rank, and a per-neighborhood choropleth.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -233,7 +233,7 @@ exposures:
     label: "Page: Sources & Methodology"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/sources
+    url: https://groening.evanappel.me/sources
     description: Provenance, per-source row counts, dbt test summary, and pipeline lineage.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
@@ -243,7 +243,7 @@ exposures:
     label: "Page: Service Requests"
     type: application
     maturity: high
-    url: https://groening-production.up.railway.app/service_requests
+    url: https://groening.evanappel.me/service_requests
     description: 311-style graffiti + pothole reports — volume over time, open/closed status, graffiti resolution, and per-type neighborhood choropleths.
     owner: {name: Evan Appel, email: appelew@gmail.com}
     depends_on:
