@@ -1,5 +1,6 @@
 """TDD for the pure warehouse-build helpers ported from Elvis."""
 
+import concurrent.futures
 import datetime
 import io
 import itertools
@@ -11,6 +12,7 @@ import pandas as pd
 import pytest
 
 import build_warehouse
+import city_config as cfg
 from build_warehouse import (
     _centroid,
     _collect_window,
@@ -330,23 +332,45 @@ class TestInspectionsSnapshotFallback:
 
     def test_first_failure_cancels_remaining_windows(self, monkeypatch):
         """A blocked API fails every window the same way; the live pull must bail
-        after the first failure rather than grind all ~60 windows through retries."""
+        after the first failure rather than grind all ~60 windows through retries.
+
+        Deterministic: only the first POST fails at once; every later POST blocks
+        until the pool shuts down (i.e. after the cancel loop has run), so no
+        window can slip through while the main thread is still submitting or
+        cancelling, however loaded the machine is. Without the cancel, releasing
+        the gate would let every remaining window hit the API.
+        """
         calls = 0
         lock = threading.Lock()
+        release = threading.Event()
 
-        def blocked_post(body):
+        def gated_blocked_post(body):
             nonlocal calls
             with lock:
                 calls += 1
+                first = calls == 1
+            if not first:
+                # Safety valve so a regression fails the assertion, never hangs.
+                release.wait(timeout=30)
             raise RuntimeError("inspections POST failed after 4 attempts")
 
-        monkeypatch.setattr(build_warehouse, "_post_inspections", blocked_post)
+        real_shutdown = concurrent.futures.ThreadPoolExecutor.shutdown
+
+        def release_then_shutdown(self, *args, **kwargs):
+            release.set()
+            return real_shutdown(self, *args, **kwargs)
+
+        monkeypatch.setattr(build_warehouse, "_post_inspections", gated_blocked_post)
+        monkeypatch.setattr(
+            concurrent.futures.ThreadPoolExecutor, "shutdown", release_then_shutdown
+        )
         n_windows = len(_inspection_windows(datetime.date(2026, 8, 16), 6, 3))
         assert n_windows > 20  # enough windows that fanning through all would be slow
 
         with pytest.raises(RuntimeError):
             _fetch_inspections_live()
 
-        # In-flight windows are bounded by the concurrency, so far fewer than the
-        # full window count should ever hit the API.
+        # Only windows already running when the first failure landed reach the
+        # API: the failed one, plus at most one in flight per pool worker.
+        assert calls <= cfg.INSPECTIONS_CONCURRENCY + 1
         assert calls < n_windows
