@@ -827,7 +827,7 @@ def _parse_gtfs(blob: bytes, members: dict[str, tuple[str, list[str]]]) -> dict[
 
 
 def fetch_transit() -> dict[str, pd.DataFrame]:
-    """TriMet GTFS static feed — returns one DataFrame per kept member (routes, stops)."""
+    """TriMet GTFS static feed — one DataFrame per kept member (routes, stops, trips, calendar)."""
     log.info("Fetching transit GTFS from %s ...", cfg.TRIMET_GTFS_URL)
     with _urlopen(cfg.TRIMET_GTFS_URL, headers=cfg.USER_AGENT) as resp:
         frames = _parse_gtfs(resp.read(), cfg.GTFS_MEMBERS)

@@ -254,8 +254,11 @@ INSPECTIONS_RETRIES = 4
 # --------------------------------------------------------------------------- #
 # The regional transit agency publishes a standard GTFS zip (keyless, public):
 # routes.txt (81 routes, route_type = mode), stops.txt (6,027 stops, WGS84
-# lat/lon), and much more. We keep routes + stops; the 67k-row trips.txt is
-# skipped for now (a service-frequency view could add it later). route_type is a
+# lat/lon), trips.txt (~68k scheduled trips), calendar.txt (which days each
+# service_id runs, over which date range), and much more. We keep routes + stops
+# for the network, and trips + calendar for service frequency (trips per route on
+# a reference weekday / Saturday / Sunday, resolved in dbt). stop_times.txt
+# (~230 MB) is skipped: trip counts need no stop-level times. route_type is a
 # GTFS-standard enum mapped to a mode label in staging, not here.
 TRIMET_GTFS_URL = "https://developer.trimet.org/schedule/gtfs.zip"
 # table_name -> (zip member, columns to keep). Columns are read as strings and
@@ -268,6 +271,17 @@ GTFS_MEMBERS = {
     "transit_stops": (
         "stops.txt",
         ["stop_id", "stop_name", "stop_lat", "stop_lon", "location_type"],
+    ),
+    "transit_trips": (
+        "trips.txt",
+        ["route_id", "service_id", "trip_id", "direction_id"],
+    ),
+    "transit_calendar": (
+        "calendar.txt",
+        [
+            "service_id", "monday", "tuesday", "wednesday", "thursday", "friday",
+            "saturday", "sunday", "start_date", "end_date",
+        ],
     ),
 }
 
@@ -449,6 +463,21 @@ SOURCES = {
         "publisher": "TriMet — GTFS static feed",
         "url": TRIMET_GTFS_URL, "coverage": "Current published schedule",
         "grain": "One row per stop; WGS84 lat/lon for the map.",
+        "license": _LICENSE_TRIMET,
+    },
+    "transit_trips": {
+        "title": "Transit — Trips", "page": "transit",
+        "publisher": "TriMet — GTFS static feed",
+        "url": TRIMET_GTFS_URL, "coverage": "Current published schedule",
+        "grain": "One row per scheduled trip (route, service pattern, direction); "
+        "counted per route on a reference weekday/Saturday/Sunday.",
+        "license": _LICENSE_TRIMET,
+    },
+    "transit_calendar": {
+        "title": "Transit — Service Calendar", "page": "transit",
+        "publisher": "TriMet — GTFS static feed",
+        "url": TRIMET_GTFS_URL, "coverage": "Current published schedule",
+        "grain": "One row per service pattern: the weekdays it runs and its date range.",
         "license": _LICENSE_TRIMET,
     },
     "housing": {

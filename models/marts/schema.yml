@@ -281,6 +281,56 @@ models:
       - name: latitude
         description: Stop latitude (WGS84 degrees).
 
+  - name: mart_transit_route_frequency
+    description: >-
+      Service frequency: one row per TriMet route with its scheduled trip count on one
+      reference weekday (a Wednesday), Saturday and Sunday. Only trips whose GTFS
+      service_id runs on that exact date count (calendar.txt day flag + date range), so
+      overlapping service periods in the feed are not double counted. Reference dates
+      are the first such days on/after the warehouse build date, clamped into the feed's
+      date range. Holiday exceptions (calendar_dates.txt) are not applied. Trips count
+      both directions; a route with no service that day has 0.
+    columns:
+      - name: route_id
+        description: GTFS route_id. Primary key.
+        tests:
+          - not_null
+          - unique
+      - name: route_short_name
+        description: Public short name/number of the route; may be empty for some routes.
+      - name: route_long_name
+        description: Full descriptive route name.
+      - name: mode
+        description: Mode label mapped from GTFS route_type (same labels as mart_transit_routes).
+        tests:
+          - not_null
+      - name: route_color
+        description: GTFS route_color hex code; may be null. Display-only.
+      - name: weekday_trips
+        description: Scheduled trips (both directions) on the reference Wednesday.
+        tests:
+          - not_null
+      - name: saturday_trips
+        description: Scheduled trips (both directions) on the reference Saturday.
+        tests:
+          - not_null
+      - name: sunday_trips
+        description: Scheduled trips (both directions) on the reference Sunday.
+        tests:
+          - not_null
+      - name: weekday_date
+        description: The reference weekday (a Wednesday) the weekday_trips count describes.
+        tests:
+          - not_null
+      - name: saturday_date
+        description: The reference Saturday the saturday_trips count describes.
+        tests:
+          - not_null
+      - name: sunday_date
+        description: The reference Sunday the sunday_trips count describes.
+        tests:
+          - not_null
+
   - name: mart_transit_summary
     description: Single-row transit headline summary.
     columns:

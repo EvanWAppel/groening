@@ -284,6 +284,18 @@ feed is live and machine-readable before wiring; `log()` and drop if not.
   `SOURCES` (2 entries → transit page), and a `transit_page` dbt exposure. Full
   dbt build green (34 models, 31 tests); 72 pytest · ruff · ty clean; pages execute
   in bare mode. Skipped trips.txt (67k rows) — a service-frequency view for later.
+- [x] **E7a-followup — transit service frequency** (2026-10-24 weekend). GTFS_MEMBERS
+  now also keeps trips.txt + calendar.txt → `raw.transit_trips` / `raw.transit_calendar`
+  (both in `SOURCES` → transit page; stop_times.txt not needed). `stg_transit_trips`,
+  `stg_transit_calendar` → `mart_transit_route_frequency`: scheduled trips per route
+  on one reference Wednesday / Saturday / Sunday (first on/after the build date,
+  clamped into the feed's range), counting only service_ids active that date, so
+  overlapping service periods aren't double counted. calendar_dates.txt (holiday
+  exceptions) not applied — documented in the mart + page caption. TDD'd: 10 pytest
+  tests incl. the mart SQL run in DuckDB over fixture raw tables. "Busiest routes"
+  bar (weekday/Sat/Sun toggle, top 20) on `views/transit.py`; exposure updated.
+  Verified on the live feed (82 routes; dbt build of the transit lineage green,
+  27 nodes; page runs clean in AppTest).
 - [x] **E7b — 311 / PDX service requests.** No generic 311 feed exists; built a
   **Service Requests** page from the two non-sensitive PortlandMaps request layers
   (verified live 2026-09-27): BPS **Graffiti Reports** (~49k, Sept 2022 – present)
