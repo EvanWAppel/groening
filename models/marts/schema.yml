@@ -187,7 +187,7 @@ models:
       (no amendment history); mainly a map layer plus one area stat.
     columns:
       - name: area_sqmi
-        description: Area inside the Urban Growth Boundary in square miles (source AREA_ square feet / 27,878,400), rounded to 0.1.
+        description: Area inside the Urban Growth Boundary in square miles (source RLIS AREA square feet / 27,878,400), rounded to 0.1.
         tests:
           - not_null
       - name: boundary_json

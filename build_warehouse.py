@@ -852,7 +852,7 @@ def fetch_ugb() -> pd.DataFrame:
     rings = (geom or {}).get("rings", [])
     outer = max(rings, key=len) if rings else []
     return pd.DataFrame(
-        [{"area_sqft": attrs.get("AREA_"), "boundary_json": json.dumps(outer)}]
+        [{"area_sqft": attrs.get("AREA"), "boundary_json": json.dumps(outer)}]
     )
 
 

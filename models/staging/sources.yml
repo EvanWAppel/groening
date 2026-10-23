@@ -59,7 +59,7 @@ sources:
           Facility type, YearBuilt/YearRetired, LengthMiles. No geometry fetched.
       - name: ugb
         description: >
-          Metro Urban Growth Boundary — one row: AREA_ (sq ft) and the outer
+          Metro RLIS Urban Growth Boundary — one row: AREA (sq ft) and the outer
           boundary ring as a JSON coordinate array (WGS84).
       - name: marriage
         description: >

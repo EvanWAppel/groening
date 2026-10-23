@@ -182,13 +182,16 @@ STR_PAGE_SIZE = 100
 BIKE_NETWORK_URL = f"{COP_TRANSPORTATION}/75"
 
 # --------------------------------------------------------------------------- #
-# Urban Growth Boundary — Metro DRC (ArcGIS Online) — VERIFIED 2026-08-11      #
+# Urban Growth Boundary — Metro RLIS (ArcGIS Online) — VERIFIED 2026-10-23      #
 # --------------------------------------------------------------------------- #
-# Single dissolved polygon (~408 sq mi), no amendment history. Native SR is
-# Oregon StatePlane (wkid 2913, feet) — pass outSR=4326. AREA_ is square feet.
+# Official RLIS layer, owner OregonMetro.RLIS (item e3a9453a1ce547a7b2ee4baac037540e,
+# RLIS metadata #178). Replaces the Metro DRC services1 .../Urban_Growth_Boundary
+# layer, retired ~2026-10-18 ("Invalid URL"). Single dissolved polygon (~410 sq
+# mi), no amendment history. Native SR is Oregon StatePlane (wkid 2913, feet) —
+# pass outSR=4326. AREA is square feet (the old layer called it AREA_).
 UGB_URL = (
-    "https://services1.arcgis.com/d9Fl2w84c4Vbf9kI/arcgis/rest/services/"
-    "Urban_Growth_Boundary/FeatureServer/0"
+    "https://services2.arcgis.com/McQ0OlIABe29rJJy/arcgis/rest/services/"
+    "Urban_Growth_Boundary_UGB/FeatureServer/0"
 )
 
 # --------------------------------------------------------------------------- #
@@ -408,7 +411,7 @@ SOURCES = {
     },
     "ugb": {
         "title": "Urban Growth Boundary", "page": "ugb",
-        "publisher": "Metro (regional government)",
+        "publisher": "Metro (regional government) — RLIS",
         "url": UGB_URL, "coverage": "Current boundary (no amendment history)",
         "grain": "Single dissolved polygon; area + outer ring for the map.",
         "license": _LICENSE_RLIS,
