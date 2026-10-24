@@ -6,6 +6,6 @@ dbt-duckdb>=1.11
 altair>=5.4
 openpyxl>=3.1
 
-# Tiresias (grounded text-to-SQL) v0.1.1, pinned to the tag's commit; keep in sync
+# Tiresias (grounded text-to-SQL) v0.1.2, pinned to the tag's commit; keep in sync
 # with pyproject.toml. The archive URL needs no git in the slim image.
-tiresias[streamlit] @ https://github.com/EvanWAppel/tiresias/archive/0ae91238f19070d6453762dee831d110d0f2e5f9.zip
+tiresias[streamlit] @ https://github.com/EvanWAppel/tiresias/archive/6d5de45cec83cb1f912263be0f968c5f38d76d75.zip
