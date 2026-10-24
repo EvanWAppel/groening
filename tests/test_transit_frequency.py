@@ -154,7 +154,12 @@ def _frequency(built_at: str) -> pd.DataFrame:
         "transit_trips": TRIPS,
         "transit_calendar": CALENDAR,
         "build_metadata": pd.DataFrame(
-            {"table_name": ["transit_trips"], "row_count": [len(TRIPS)], "built_at": [built_at]}
+            {
+                "table_name": ["transit_trips"],
+                "row_count": [len(TRIPS)],
+                "built_at": [built_at],
+                "snapshot_as_of": pd.Series([None], dtype="string"),
+            }
         ),
     }
     for name, frame in raw.items():

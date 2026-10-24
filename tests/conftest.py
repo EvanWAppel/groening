@@ -111,3 +111,10 @@ def render_model():
         return sql
 
     return render
+
+
+@pytest.fixture
+def snapshot_dir(tmp_path, monkeypatch):
+    """Point the last-good-snapshot store at an empty temp dir (never touch data/)."""
+    monkeypatch.setattr(build_warehouse, "SNAPSHOT_DIR", tmp_path)
+    return tmp_path

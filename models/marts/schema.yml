@@ -231,6 +231,12 @@ models:
         description: Timestamp of the warehouse build (stamped in UTC), shared by every row of one build.
         tests:
           - not_null
+      - name: from_snapshot
+        description: True when this table's live fetch failed (or returned zero rows) and the build loaded its last good snapshot from data/ instead, so the data is older than built_at.
+        tests:
+          - not_null
+      - name: snapshot_as_of
+        description: When the snapshot served for this table was fetched (UTC); null for every table fetched live this build. Null with from_snapshot true means the snapshot's date was not recorded.
 
   - name: mart_transit_routes
     description: >-
