@@ -4,9 +4,11 @@ import json
 from html import escape
 from pathlib import Path
 
+import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
+import city_config as cfg
 from app_db import query
 
 ASSETS = Path(__file__).parent / "assets"
@@ -37,6 +39,46 @@ TOPICS = {
 }
 
 
+# Raw tables behind each page, where they differ from the page key itself.
+_TOPIC_TABLES = {
+    "bike": ("bike_network",),
+    "transit": tuple(cfg.GTFS_MEMBERS),
+}
+
+
+def topic_tables(topic: str) -> tuple[str, ...]:
+    """The raw tables a topic page is built from (usually just the topic itself)."""
+    return _TOPIC_TABLES.get(topic, (topic,))
+
+
+def stale_message(topic: str, stale: pd.DataFrame) -> str | None:
+    """The "served from a snapshot" notice for ``topic``, or None if it's live.
+
+    ``stale`` holds the build's snapshot-fallback rows (``table_name``,
+    ``snapshot_as_of``). A page built from several tables reports the oldest
+    snapshot among them.
+    """
+    rows = stale[stale["table_name"].isin(topic_tables(topic))]
+    if rows.empty:
+        return None
+    oldest = rows["snapshot_as_of"].min()
+    when = "an unknown date" if pd.isna(oldest) else oldest.strftime("%B %-d, %Y")
+    return (
+        f"The live source for this page was unavailable at the last build, so it "
+        f"shows the last good snapshot, with data as of {when}."
+    )
+
+
+def stale_notice(topic: str) -> None:
+    """Warn on a topic page whose data came from a last-good snapshot this build."""
+    stale = query(
+        "select table_name, snapshot_as_of from main.mart_build_metadata where from_snapshot"
+    )
+    message = stale_message(topic, stale)
+    if message:
+        st.warning(message, icon="⚠️")
+
+
 def apply_style() -> None:
     st.html(ASSETS / "style.css")
 
@@ -51,6 +93,7 @@ def page_header(topic: str) -> None:
     st.page_link("views/overview.py", label="← All datasets")
     st.html(f'<div class="eyebrow detail-eyebrow">{escape(category)} <span>／ {number}</span></div>')
     st.title(title)
+    stale_notice(topic)
 
 
 def build_stamp() -> str:

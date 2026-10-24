@@ -36,9 +36,9 @@ timing flakes noted on 2026-10-22 were fixed by FLAKE-01 (PR #20).
    `views/transit.py`~~ (`d79b1e2`, plus `f0c6006` classifying the mart in `tiresias.yml`).
 
 **Nothing autonomous is queued.** The open items are Evan's, in `BLOCKED.md`: review the
-Tiresias gold set / column-doc claims, and decide whether a single dead optional source should
-fail the whole deploy (options a/b/c there; don't build any of them before he picks). E9 is the
-only open TASKS item; see "Do NOT".
+Tiresias gold set / column-doc claims. The dead-source question was decided 2026-10-24: option (c),
+last-good snapshot fallback for every source except `neighborhoods` (see `DECISIONS.md`; implemented
+in the snapshot-fallback PR). E9 is the only open TASKS item; see "Do NOT".
 
 ### House rules that matter (from CLAUDE.md)
 
@@ -59,8 +59,6 @@ only open TASKS item; see "Do NOT".
   that a dedicated `groening` workspace key with a spend cap and alert is set on Railway, but
   TASKS.md E9 still reads "gated" and asks for the key checklist first, so ask Evan before
   starting it. Do not run the live Tiresias gold eval.
-- **Optional-source handling** (fatal vs. optional vs. snapshot fallback) — waiting on Evan's
-  call in BLOCKED.md.
 - **E5 cross-city comparison** (deferred) and **E8 deploy wiring** (needs deploy).
 - Reviewing the Tiresias gold set / column-doc claims — Evan's review (license strings were confirmed 2026-10-23).
 - No browser automation; verify with tests/curl/logs. Never read `.env`.

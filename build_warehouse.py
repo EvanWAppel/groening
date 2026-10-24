@@ -27,6 +27,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import duckdb
@@ -63,6 +64,12 @@ LOCAL_TZ = cfg.LOCAL_TZ
 # raw rows here and fall back to it when the live pull is blocked, logging loudly.
 # Refresh it from a machine that can reach the API (see _dump_inspections_snapshot).
 INSPECTIONS_SNAPSHOT = Path(__file__).parent / "data" / "restaurant_inspections_raw.parquet"
+
+# Last good snapshot of each topic in cfg.SNAPSHOT_FALLBACK_TOPICS, one Parquet per
+# raw table (data/<table>_raw.parquet, the inspections naming). Refreshed on every
+# successful live fetch; loaded, with a loud WARNING, when that fetch fails or
+# returns zero rows. See fetch_or_snapshot and DECISIONS.md 2026-10-24.
+SNAPSHOT_DIR = Path(__file__).parent / "data"
 
 # Topics Portland does not publish as a clean, machine-readable open feed live in
 # city_config (city-specific data); build_warehouse just logs them at build time.
@@ -498,19 +505,29 @@ def _collect_window(post, path: str, ws: str, we: str) -> list[dict]:
 # Warehouse materialization                                                    #
 # --------------------------------------------------------------------------- #
 def collect_build_metadata(
-    row_counts: dict[str, int], built_at: datetime.datetime
+    row_counts: dict[str, int],
+    built_at: datetime.datetime,
+    snapshot_dates: dict[str, str] | None = None,
 ) -> pd.DataFrame:
     """One provenance row per loaded raw table (name, row count), stamped with the
     build time. dbt aggregates this into the app's "Data as of <date> · N sources ·
     M rows" banner and drives the per-source Sources & Methodology page. Sorted by
     table name so a rebuild with identical data produces identical rows.
+
+    ``snapshot_dates`` maps a table that fell back to its last good snapshot to that
+    snapshot's ISO timestamp; ``snapshot_as_of`` is null for every live table, so
+    the pages can flag exactly the stale ones.
     """
     built = built_at.isoformat()
+    stale = snapshot_dates or {}
+    tables = sorted(row_counts)
     return pd.DataFrame(
-        [
-            {"table_name": table, "row_count": int(count), "built_at": built}
-            for table, count in sorted(row_counts.items())
-        ]
+        {
+            "table_name": tables,
+            "row_count": [int(row_counts[t]) for t in tables],
+            "built_at": [built] * len(tables),
+            "snapshot_as_of": pd.Series([stale.get(t) for t in tables], dtype="string"),
+        }
     )
 
 
@@ -544,6 +561,143 @@ def load_raw(con: duckdb.DuckDBPyConnection, table: str, df: pd.DataFrame) -> No
     con.execute(f"CREATE OR REPLACE TABLE raw.{table} AS SELECT * FROM _df")
     con.unregister("_df")
     log.info("Loaded raw.%s: %d rows, %d cols", table, len(df), len(df.columns))
+
+
+# --------------------------------------------------------------------------- #
+# Last-good snapshots: a dead source falls back instead of failing the deploy   #
+# --------------------------------------------------------------------------- #
+def snapshot_path(table: str) -> Path:
+    """Where ``table``'s last good snapshot lives (``data/<table>_raw.parquet``)."""
+    return SNAPSHOT_DIR / f"{table}_raw.parquet"
+
+
+def _write_parquet_snapshot(path: Path, df: pd.DataFrame, taken_at: datetime.datetime) -> None:
+    """Write ``df`` to ``path`` as ZSTD Parquet with the fetch time in its metadata.
+
+    The date goes inside the file (Parquet key/value metadata ``snapshot_at``)
+    because a git checkout or Docker COPY resets file mtimes. Written through
+    DuckDB so the build image needs no pyarrow.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    stamp = taken_at.isoformat().replace("'", "")
+    con = duckdb.connect()
+    try:
+        con.register("snapshot_df", df)
+        con.execute(
+            f"COPY snapshot_df TO '{path}' "
+            f"(FORMAT PARQUET, COMPRESSION ZSTD, KV_METADATA {{snapshot_at: '{stamp}'}})"
+        )
+    finally:
+        con.close()
+
+
+def write_snapshot(table: str, df: pd.DataFrame, taken_at: datetime.datetime) -> None:
+    """Persist ``df`` as ``table``'s last good snapshot. Never writes an empty one."""
+    if df.empty:
+        raise ValueError(f"{table}: refusing to write an empty snapshot")
+    path = snapshot_path(table)
+    _write_parquet_snapshot(path, df, taken_at)
+    log.info("%s: refreshed last-good snapshot (%d rows) at %s", table, len(df), path)
+
+
+def read_snapshot(table: str) -> tuple[pd.DataFrame, str | None]:
+    """``table``'s last good snapshot and its ISO fetch time (None if unrecorded)."""
+    path = snapshot_path(table)
+    con = duckdb.connect()
+    try:
+        df = con.execute("SELECT * FROM read_parquet(?)", [str(path)]).df()
+        meta = dict(
+            con.execute(
+                "SELECT key::VARCHAR, value::VARCHAR FROM parquet_kv_metadata(?)",
+                [str(path)],
+            ).fetchall()
+        )
+    finally:
+        con.close()
+    return df, meta.get("snapshot_at")
+
+
+def _load_fallback(
+    tables: tuple[str, ...], reason: str, fallbacks: dict[str, str]
+) -> dict[str, pd.DataFrame] | None:
+    """Load every table's snapshot, or None (logged) if any one is missing."""
+    missing = [str(snapshot_path(t)) for t in tables if not snapshot_path(t).exists()]
+    if missing:
+        log.error(
+            "%s: live fetch failed (%s) and there is no last-good snapshot at %s; "
+            "failing the build as before.",
+            "/".join(tables),
+            reason,
+            ", ".join(missing),
+        )
+        return None
+    frames: dict[str, pd.DataFrame] = {}
+    for t in tables:
+        df, taken = read_snapshot(t)
+        frames[t] = df
+        fallbacks[t] = taken or "unknown"
+        log.warning(
+            "SNAPSHOT FALLBACK %s: live fetch failed (%s); loading the last good "
+            "snapshot from %s (%d rows, %s). This topic is STALE until the source "
+            "recovers; its page shows a data-as-of notice.",
+            t,
+            reason,
+            taken or "an unknown date",
+            len(df),
+            snapshot_path(t),
+        )
+    return frames
+
+
+def fetch_set_or_snapshot(
+    tables: Iterable[str],
+    fetch: Callable[[], dict[str, pd.DataFrame]],
+    fallbacks: dict[str, str],
+    now: datetime.datetime | None = None,
+) -> dict[str, pd.DataFrame]:
+    """Fetch several raw tables from one source; on failure use their snapshots.
+
+    Option (c) of DECISIONS.md 2026-10-24. If ``fetch`` raises, or any member comes
+    back empty, every member loads its last good snapshot together (so e.g. GTFS
+    routes and trips always come from the same feed version), each fallback is
+    logged as a WARNING and recorded in ``fallbacks`` (table -> snapshot date) for
+    build provenance. With no snapshot for some member, the build fails exactly
+    as before: the exception re-raises, or the empty frame reaches ``load_raw``.
+    A live success refreshes every member's snapshot.
+    """
+    tables = tuple(tables)
+    unlisted = sorted(set(tables) - cfg.SNAPSHOT_FALLBACK_TOPICS)
+    if unlisted:
+        raise ValueError(
+            f"no snapshot fallback configured for {unlisted}; add them to "
+            "city_config.SNAPSHOT_FALLBACK_TOPICS or load them directly"
+        )
+    try:
+        frames = fetch()
+    except Exception as err:
+        log.warning("%s: live fetch raised", "/".join(tables), exc_info=True)
+        loaded = _load_fallback(tables, f"{type(err).__name__}: {err}", fallbacks)
+        if loaded is None:
+            raise
+        return loaded
+    empty = [t for t in tables if t not in frames or frames[t].empty]
+    if empty:
+        loaded = _load_fallback(tables, f"zero rows for {', '.join(empty)}", fallbacks)
+        return frames if loaded is None else loaded
+    taken_at = now or datetime.datetime.now(tz=datetime.UTC)
+    for t in tables:
+        write_snapshot(t, frames[t], taken_at)
+    return {t: frames[t] for t in tables}
+
+
+def fetch_or_snapshot(
+    table: str,
+    fetch: Callable[[], pd.DataFrame],
+    fallbacks: dict[str, str],
+    now: datetime.datetime | None = None,
+) -> pd.DataFrame:
+    """One-table form of :func:`fetch_set_or_snapshot`."""
+    return fetch_set_or_snapshot((table,), lambda: {table: fetch()}, fallbacks, now)[table]
 
 
 # --------------------------------------------------------------------------- #
@@ -1111,6 +1265,9 @@ def _fetch_inspections_live() -> pd.DataFrame:
 
 def main() -> None:
     con = duckdb.connect(str(DB_PATH))
+    # Topics served from their last good snapshot this build (table -> snapshot
+    # date). Stamped into raw.build_metadata so the pages can say so.
+    fallbacks: dict[str, str] = {}
     try:
         # Neighborhood polygons first: every geocoded point dataset below is
         # tagged with its containing neighborhood (point-in-polygon) so the
@@ -1121,56 +1278,87 @@ def main() -> None:
         polygons = _neighborhood_polygons(neighborhoods)
 
         log.info("Fetching building_permits (PortlandMaps ArcGIS) ...")
-        load_raw(con, "building_permits", tag_neighborhoods(fetch_building_permits(), polygons))
+        load_raw(
+            con,
+            "building_permits",
+            fetch_or_snapshot(
+                "building_permits", lambda: tag_neighborhoods(fetch_building_permits(), polygons), fallbacks
+            ),
+        )
 
         log.info("Fetching parks (PortlandMaps ArcGIS) ...")
-        load_raw(con, "parks", fetch_parks())
+        load_raw(con, "parks", fetch_or_snapshot("parks", fetch_parks, fallbacks))
 
         log.info("Fetching housing (PortlandMaps ArcGIS) ...")
-        load_raw(con, "housing", fetch_housing())
+        load_raw(con, "housing", fetch_or_snapshot("housing", fetch_housing, fallbacks))
 
         log.info("Fetching historic (PortlandMaps ArcGIS) ...")
-        load_raw(con, "historic", tag_neighborhoods(fetch_historic(), polygons))
+        load_raw(
+            con,
+            "historic",
+            fetch_or_snapshot(
+                "historic", lambda: tag_neighborhoods(fetch_historic(), polygons), fallbacks
+            ),
+        )
 
         log.info("Fetching weather (NOAA GHCN-Daily, PDX) ...")
-        load_raw(con, "weather", fetch_weather())
+        load_raw(con, "weather", fetch_or_snapshot("weather", fetch_weather, fallbacks))
 
         log.info("Fetching willamette discharge (USGS NWIS) ...")
-        load_raw(con, "willamette", fetch_willamette())
+        load_raw(con, "willamette", fetch_or_snapshot("willamette", fetch_willamette, fallbacks))
 
         log.info("Fetching short_term_rentals (PortlandMaps report) ...")
-        load_raw(con, "short_term_rentals", fetch_str())
+        load_raw(con, "short_term_rentals", fetch_or_snapshot("short_term_rentals", fetch_str, fallbacks))
 
         log.info("Fetching crime (PortlandMaps ArcGIS) ...")
-        load_raw(con, "crime", tag_neighborhoods(fetch_crime(), polygons))
+        load_raw(
+            con,
+            "crime",
+            fetch_or_snapshot(
+                "crime", lambda: tag_neighborhoods(fetch_crime(), polygons), fallbacks
+            ),
+        )
 
         log.info("Fetching service_requests (PortlandMaps ArcGIS graffiti + potholes) ...")
-        load_raw(con, "service_requests", tag_neighborhoods(fetch_service_requests(), polygons))
+        load_raw(
+            con,
+            "service_requests",
+            fetch_or_snapshot(
+                "service_requests", lambda: tag_neighborhoods(fetch_service_requests(), polygons), fallbacks
+            ),
+        )
 
         log.info("Fetching air_quality (EPA AQS bulk, tri-county) ...")
-        load_raw(con, "air_quality", fetch_air_quality())
+        load_raw(con, "air_quality", fetch_or_snapshot("air_quality", fetch_air_quality, fallbacks))
 
         log.info("Fetching trees (PortlandMaps ArcGIS) ...")
-        load_raw(con, "trees", tag_neighborhoods(fetch_trees(), polygons))
+        load_raw(
+            con,
+            "trees",
+            fetch_or_snapshot(
+                "trees", lambda: tag_neighborhoods(fetch_trees(), polygons), fallbacks
+            ),
+        )
 
         log.info("Fetching heritage_trees (PortlandMaps ArcGIS) ...")
-        load_raw(con, "heritage_trees", fetch_heritage_trees())
+        load_raw(con, "heritage_trees", fetch_or_snapshot("heritage_trees", fetch_heritage_trees, fallbacks))
 
         log.info("Fetching bike_network (PortlandMaps ArcGIS) ...")
-        load_raw(con, "bike_network", fetch_bike_network())
+        load_raw(con, "bike_network", fetch_or_snapshot("bike_network", fetch_bike_network, fallbacks))
 
         log.info("Fetching transit (TriMet GTFS) ...")
-        for table, frame in fetch_transit().items():
+        transit = fetch_set_or_snapshot(tuple(cfg.GTFS_MEMBERS), fetch_transit, fallbacks)
+        for table, frame in transit.items():
             load_raw(con, table, frame)
 
         log.info("Fetching ugb (Metro ArcGIS) ...")
-        load_raw(con, "ugb", fetch_ugb())
+        load_raw(con, "ugb", fetch_or_snapshot("ugb", fetch_ugb, fallbacks))
 
         log.info("Fetching marriage (Oregon OHA vital stats) ...")
-        load_raw(con, "marriage", fetch_marriage())
+        load_raw(con, "marriage", fetch_or_snapshot("marriage", fetch_marriage, fallbacks))
 
         log.info("Fetching tourism / air travel (BTS Socrata) ...")
-        load_raw(con, "tourism", fetch_tourism())
+        load_raw(con, "tourism", fetch_or_snapshot("tourism", fetch_tourism, fallbacks))
 
         log.info("Fetching restaurant_inspections (Multnomah MyHealthDepartment) ...")
         load_raw(con, "restaurant_inspections", fetch_inspections())
@@ -1178,7 +1366,7 @@ def main() -> None:
         # Stamp build provenance from the tables that actually landed, so the app
         # can show "Data as of <date>" from a mart rather than guessing.
         built_at = datetime.datetime.now(tz=datetime.UTC)
-        meta = collect_build_metadata(_raw_row_counts(con), built_at)
+        meta = collect_build_metadata(_raw_row_counts(con), built_at, fallbacks)
         load_raw(con, "build_metadata", meta)
         log.info(
             "Build provenance: %d sources, %d total rows, built %s",
@@ -1193,6 +1381,14 @@ def main() -> None:
     # 2026-08-11). Logged per data discipline so a missing page never reads as done.
     for topic, reason in DROPPED_TOPICS.items():
         log.warning("DROPPED topic %s: %s", topic, reason)
+
+    # Repeat any snapshot fallback at the very end so it can't scroll past unseen.
+    for table, taken in sorted(fallbacks.items()):
+        log.warning(
+            "STALE topic %s: live source failed; served the last good snapshot from %s",
+            table,
+            taken,
+        )
 
     log.info("Warehouse build complete: %s", DB_PATH)
 

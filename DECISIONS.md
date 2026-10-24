@@ -230,7 +230,7 @@ left as is; it was not part of this call.
 
 ---
 
-## 2026-10-24 — A dead source falls back to its last good snapshot in `data/` (option c; confirmed by Evan 2026-10-24, topic list pending)
+## 2026-10-24 — A dead source falls back to its last good snapshot in `data/` (option c; confirmed by Evan 2026-10-24, incl. the topic list)
 
 Evan's call on the BLOCKED.md question "should a single dead optional source fail the
 whole deploy?", raised after Metro retired the old UGB layer around 2026-10-18 and
@@ -251,5 +251,57 @@ errors". To keep that visible, the fallback must log loudly and should be surfac
 build provenance or on the page. Each fallback topic also needs a committed snapshot that
 gets refreshed after successful live pulls. Topics not on the list stay fatal.
 
-**Open:** which topics get the fallback. Evan hasn't picked them yet (tracked in
-`BLOCKED.md`). No code until he does.
+**Topics (Evan, 2026-10-24):** `ugb`; PortlandMaps `building_permits`, `parks`,
+`housing`, `historic`, `trees`, `heritage_trees`, `bike_network`, `crime`,
+`service_requests`, `short_term_rentals`; `weather` (NOAA), `willamette` (USGS),
+`air_quality` (EPA AQS), `marriage` (Oregon OHA), `tourism` (BTS); TriMet GTFS
+`transit_routes`, `transit_stops`, `transit_trips`, `transit_calendar`. **Not**
+`neighborhoods`: every point topic is tagged against it, so it stays fatal.
+`restaurant_inspections` keeps its existing, separate fallback.
+
+**Implementation notes (agent-drafted, for Evan to confirm):**
+
+- The list is `city_config.SNAPSHOT_FALLBACK_TOPICS`. `main()` routes each listed
+  topic through `fetch_or_snapshot` (TriMet through `fetch_set_or_snapshot`); any
+  other table name is refused, so `neighborhoods` can't be wired to a fallback by
+  accident.
+- **Trigger:** the fetch raises *any* exception, or returns zero rows. Catching every
+  exception (not just network errors) is deliberate: a publisher renaming a field
+  breaks a fetcher the same way a retired layer does. The cost is that a genuine bug
+  in a fetcher also falls back rather than failing, though loudly and with the full
+  traceback in the log.
+- **Loud, never silent:** each fallback logs `WARNING SNAPSHOT FALLBACK <table>: live
+  fetch failed (<error>); loading the last good snapshot from <date> (<n> rows,
+  <path>)`, plus the traceback. The build repeats a `STALE topic <table>` warning at
+  the very end of the log. With no snapshot, the build fails exactly as before (the
+  original exception re-raises, or the empty frame reaches `load_raw`).
+- **GTFS falls back as a set:** if the download fails or any of the four tables is
+  empty, all four load from snapshots, so routes, stops, trips and calendar always
+  come from one feed version.
+- **Snapshots:** `data/<table>_raw.parquet` (the inspections naming), ZSTD Parquet
+  written through DuckDB, with the fetch time stored inside the file as Parquet
+  key/value metadata `snapshot_at`. It's stored there because a git checkout or Docker
+  `COPY` resets mtimes. The snapshot is the table exactly as loaded, so the point
+  topics keep their `hood_name` tag. **Every successful live fetch rewrites the
+  snapshot**, the inspections pattern, and a zero-row result never overwrites one. In
+  the Docker build that write is thrown away. Locally it dirties `data/`, so
+  committing a refresh is a deliberate act.
+- **Size:** the first set of 20 snapshots, taken 2026-10-24, is **8.5 MiB** in total.
+  The largest are building_permits 2.8 MiB, trees 1.8 MiB, service_requests 0.9 MiB,
+  crime 0.8 MiB, historic 0.7 MiB and bike_network 0.6 MiB; everything else is under
+  0.3 MiB. That's small enough to commit and to bake into the image. Each refresh
+  commit can add up to about 8.5 MB to git history, so refresh occasionally (e.g.
+  monthly, or after a source changes shape), not on every local build. If that ever
+  grows, the next step would be Git LFS or a release-asset download in the Dockerfile.
+- **Visible on the site:** `raw.build_metadata` gains `snapshot_as_of` (null when
+  live), and `mart_build_metadata` gains `from_snapshot` and `snapshot_as_of`. Every
+  topic page shows a warning under its title ("…shows the last good snapshot, with
+  data as of <date>"; for Transit, the oldest of its four tables), and Sources &
+  Methodology lists every stale source with its date.
+- **Checked:** a simulated outage of all 20 sources built the warehouse from the
+  committed snapshots, then `dbt build` passed (PASS=163) and `tiresias check`
+  passed.
+- **Not done:** `restaurant_inspections` (always on its snapshot on Railway) does not
+  show the page notice, because its older fallback isn't routed through this
+  mechanism and its existing snapshot has no recorded date. Folding it in is a small
+  follow-up if wanted.

@@ -132,4 +132,6 @@ sources:
           Build provenance stamped by build_warehouse.py after every source
           lands: one row per loaded raw table (table_name, row_count) with a
           shared ISO build timestamp (built_at). Powers the app's "Data as of
-          <date> · N sources · M rows" provenance banner.
+          <date> · N sources · M rows" provenance banner. snapshot_as_of is the
+          ISO fetch time of the last good snapshot a table fell back to when its
+          live source failed (null when fetched live).

@@ -537,6 +537,39 @@ DROPPED_TOPICS = {
 }
 
 
+# Raw tables that fall back to their last good snapshot in data/<table>_raw.parquet
+# when the live fetch fails or returns zero rows (Evan's option (c), DECISIONS.md
+# 2026-10-24), so one publisher going dark doesn't block every deploy. The fallback
+# logs a WARNING and the topic's page shows a "data as of <snapshot date>" notice.
+# Every topic not listed here stays fatal. `neighborhoods` is deliberately absent:
+# every point topic is tagged against it, so it must be live. restaurant_inspections
+# has its own older fallback (fetch_inspections) and is not listed either.
+SNAPSHOT_FALLBACK_TOPICS = frozenset(
+    {
+        "ugb",
+        "building_permits",
+        "parks",
+        "housing",
+        "historic",
+        "trees",
+        "heritage_trees",
+        "bike_network",
+        "crime",
+        "service_requests",
+        "short_term_rentals",
+        "weather",
+        "willamette",
+        "air_quality",
+        "marriage",
+        "tourism",
+        "transit_routes",
+        "transit_stops",
+        "transit_trips",
+        "transit_calendar",
+    }
+)
+
+
 def source_catalog_rows(row_counts: dict[str, int]) -> list[dict]:
     """Merge the SOURCES catalog with a table_name -> row_count mapping.
 

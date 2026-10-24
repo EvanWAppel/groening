@@ -28,6 +28,23 @@ st.caption(
 )
 st.html(f'<p class="footer-provenance">{build_stamp()}</p>')
 
+# Sources whose live fetch failed this build and were served from their last good
+# snapshot in data/ (DECISIONS.md 2026-10-24). Listed so stale data never reads as live.
+stale = query(
+    "select table_name, snapshot_as_of from main.mart_build_metadata "
+    "where from_snapshot order by table_name"
+)
+if not stale.empty:
+    listed = ", ".join(
+        f"{table} (as of {'unknown date' if pd.isna(taken) else f'{taken:%Y-%m-%d}'})"
+        for table, taken in zip(stale["table_name"], stale["snapshot_as_of"], strict=True)
+    )
+    st.warning(
+        f"Live source unavailable at the last build; serving the last good snapshot "
+        f"for: {listed}.",
+        icon="⚠️",
+    )
+
 # Row counts come from the build-provenance mart; provenance from the city config.
 counts = dict(
     query("select table_name, row_count from main.mart_build_metadata").itertuples(
