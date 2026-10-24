@@ -123,6 +123,12 @@ bulk files). Checked off retroactively._
   files (TDD'd).
 - [x] **ETL-04** — Every fetch logs source/URL/row count; a zero-row fetch raises
   (VS-05).
+- [x] **ETL-05** — Fold `restaurant_inspections` into the shared last-good-snapshot
+  fallback from PR #27 (DECISIONS.md 2026-10-24). It is now in
+  `city_config.SNAPSHOT_FALLBACK_TOPICS` and goes through `fetch_or_snapshot`, so it gets
+  the same loud `SNAPSHOT FALLBACK`/`STALE topic` log lines, provenance stamp and page
+  notice. The older inspections-only helpers are gone, and the committed snapshot was
+  re-pulled live with a `snapshot_at` date.
 
 ---
 
@@ -193,7 +199,7 @@ recorded above and each source is verified. For each: fetch → `stg_` view →
 - [x] **DEPLOY-04** — Full Railway deploy with all kept topics; baked warehouse
   builds (dbt PASS=42) and the app serves. Build ~13 min end to end (the bulk is
   source fetches plus, at the time, ~3 min of inspections 403 retries before the
-  snapshot fallback). Since fixed (c6a645a): `_fetch_inspections_live` cancels every
+  snapshot fallback). Since fixed (c6a645a): `_fetch_inspections_live` (now `fetch_inspections`) cancels every
   not-yet-started window on the first failed one and re-raises, so the build falls
   back to the snapshot after one window's retries (`INSPECTIONS_RETRIES`=4, ~15 s of
   backoff) instead of grinding all ~60 windows.

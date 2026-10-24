@@ -58,17 +58,12 @@ DB_PATH = Path(__file__).parent / "portland.duckdb"
 PAGE_SIZE = cfg.PAGE_SIZE
 LOCAL_TZ = cfg.LOCAL_TZ
 
-# Committed fallback for restaurant inspections. The MyHealthDepartment API 403s
-# datacenter/cloud egress IPs (Railway included), so the live fetch that works
-# from a residential IP fails in the build container. We keep a snapshot of the
-# raw rows here and fall back to it when the live pull is blocked, logging loudly.
-# Refresh it from a machine that can reach the API (see _dump_inspections_snapshot).
-INSPECTIONS_SNAPSHOT = Path(__file__).parent / "data" / "restaurant_inspections_raw.parquet"
-
 # Last good snapshot of each topic in cfg.SNAPSHOT_FALLBACK_TOPICS, one Parquet per
-# raw table (data/<table>_raw.parquet, the inspections naming). Refreshed on every
-# successful live fetch; loaded, with a loud WARNING, when that fetch fails or
-# returns zero rows. See fetch_or_snapshot and DECISIONS.md 2026-10-24.
+# raw table (data/<table>_raw.parquet). Refreshed on every successful live fetch;
+# loaded, with a loud WARNING, when that fetch fails or returns zero rows. See
+# fetch_or_snapshot and DECISIONS.md 2026-10-24. restaurant_inspections relies on
+# this on every Railway build: the MyHealthDepartment API 403s datacenter IPs, so
+# its snapshot is refreshed by a local build from a residential IP.
 SNAPSHOT_DIR = Path(__file__).parent / "data"
 
 # Topics Portland does not publish as a clean, machine-readable open feed live in
@@ -1130,80 +1125,13 @@ def _post_inspections(body: dict) -> object:
     ) from last_err
 
 
-def _load_inspections_snapshot() -> pd.DataFrame:
-    """Read the committed raw-inspections snapshot (Parquet) via DuckDB.
-
-    Read through DuckDB, not ``pd.read_parquet``, so we don't depend on pyarrow
-    being present in the runtime/build image (``requirements.txt`` doesn't ship it).
-    """
-    if not INSPECTIONS_SNAPSHOT.exists():
-        raise RuntimeError(
-            f"restaurant_inspections snapshot missing at {INSPECTIONS_SNAPSHOT}; "
-            "cannot fall back after a blocked live fetch"
-        )
-    con = duckdb.connect()
-    try:
-        df = con.execute(
-            "SELECT * FROM read_parquet(?)", [str(INSPECTIONS_SNAPSHOT)]
-        ).df()
-    finally:
-        con.close()
-    log.warning(
-        "restaurant_inspections: loaded %d rows from committed snapshot %s",
-        len(df),
-        INSPECTIONS_SNAPSHOT,
-    )
-    return df
-
-
-def _dump_inspections_snapshot(df: pd.DataFrame) -> None:
-    """Persist a fresh raw-inspections snapshot for the datacenter-blocked fallback.
-
-    Called after a successful live pull so the committed snapshot stays current
-    whenever the build runs from an IP the API allows (e.g. a local refresh).
-    """
-    INSPECTIONS_SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect()
-    try:
-        con.register("snapshot_df", df)
-        con.execute(
-            f"COPY snapshot_df TO '{INSPECTIONS_SNAPSHOT}' (FORMAT PARQUET)"
-        )
-    finally:
-        con.close()
-    log.info(
-        "restaurant_inspections: refreshed snapshot (%d rows) at %s",
-        len(df),
-        INSPECTIONS_SNAPSHOT,
-    )
-
-
 def fetch_inspections() -> pd.DataFrame:
     """Multnomah County food-facility inspections (rolling window, all types).
 
-    Tries the live MyHealthDepartment API first. That host 403s datacenter IPs,
-    so from a build container (Railway) the live pull fails; when it does, fall
-    back to the committed snapshot rather than failing the whole warehouse build.
-    A live success refreshes the snapshot so it stays current.
-    """
-    try:
-        df = _fetch_inspections_live()
-    except (urllib.error.URLError, RuntimeError, TimeoutError, ConnectionError) as err:
-        log.warning(
-            "restaurant_inspections: live fetch failed (%s). The MyHealthDepartment "
-            "API blocks datacenter IPs; falling back to the committed snapshot.",
-            err,
-        )
-        return _load_inspections_snapshot()
-    # Only refresh the committed fallback on a real pull; never clobber it with an
-    # empty result (which would defeat the fallback on the next blocked build).
-    if not df.empty:
-        _dump_inspections_snapshot(df)
-    return df
-
-
-def _fetch_inspections_live() -> pd.DataFrame:
-    """Live pull of inspections from the searchInspections API (may 403 off-net).
+    Live pull from the MyHealthDepartment searchInspections API. That host 403s
+    datacenter IPs, so from a build container (Railway) this raises and main()
+    falls back to the last good snapshot via fetch_or_snapshot, like every other
+    listed topic.
 
     Tiles the rolling window into date ranges (splitting any that overflow the
     ~225-row cap) and dedupes by inspectionID. Pools/spas come back too; the
@@ -1361,7 +1289,11 @@ def main() -> None:
         load_raw(con, "tourism", fetch_or_snapshot("tourism", fetch_tourism, fallbacks))
 
         log.info("Fetching restaurant_inspections (Multnomah MyHealthDepartment) ...")
-        load_raw(con, "restaurant_inspections", fetch_inspections())
+        load_raw(
+            con,
+            "restaurant_inspections",
+            fetch_or_snapshot("restaurant_inspections", fetch_inspections, fallbacks),
+        )
 
         # Stamp build provenance from the tables that actually landed, so the app
         # can show "Data as of <date>" from a mart rather than guessing.

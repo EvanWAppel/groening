@@ -301,7 +301,40 @@ gets refreshed after successful live pulls. Topics not on the list stay fatal.
 - **Checked:** a simulated outage of all 20 sources built the warehouse from the
   committed snapshots, then `dbt build` passed (PASS=163) and `tiresias check`
   passed.
-- **Not done:** `restaurant_inspections` (always on its snapshot on Railway) does not
-  show the page notice, because its older fallback isn't routed through this
-  mechanism and its existing snapshot has no recorded date. Folding it in is a small
-  follow-up if wanted.
+- **Not done at first:** `restaurant_inspections` (always on its snapshot on Railway)
+  did not show the page notice, because its older fallback wasn't routed through this
+  mechanism and its existing snapshot had no recorded date. Folded in by the follow-up
+  entry below (TASKS ETL-05).
+
+---
+
+## 2026-10-24 — `restaurant_inspections` joins the shared snapshot fallback (agent-drafted, for Evan to confirm)
+
+Follow-up to the entry above (TASKS ETL-05). **Chose:** add `restaurant_inspections`
+to `city_config.SNAPSHOT_FALLBACK_TOPICS`, route it through `fetch_or_snapshot` in
+`main()`, and delete its one-off fallback (`INSPECTIONS_SNAPSHOT`,
+`_load_inspections_snapshot`, `_dump_inspections_snapshot`, and the
+`fetch_inspections` wrapper; the live fetcher `_fetch_inspections_live` is now
+`fetch_inspections`, like every other topic's fetcher). **Rejected:** keeping two
+fallback mechanisms side by side, which left inspections without the provenance stamp,
+the `STALE topic` log line and the page notice. **Trade-offs:**
+
+- **The Restaurant Inspections page now always shows the "last good snapshot, data as
+  of <date>" warning in production,** and Sources & Methodology always lists it,
+  because the MyHealthDepartment API 403s Railway's datacenter IP on every build. That
+  is accurate (the data really is a snapshot), but it is a permanent banner, not an
+  outage signal. The `STALE topic restaurant_inspections` log line is likewise on
+  every Railway build.
+- **Broader trigger:** the old fallback caught only `URLError`, `RuntimeError`,
+  `TimeoutError` and `ConnectionError`; it now catches any exception, the same as the
+  other topics. A zero-row live pull used to reach `load_raw` and fail the build; it
+  now falls back.
+- **Snapshot re-pulled:** the old snapshot (4,640 rows, taken around 2026-08-16, no
+  recorded date) was replaced by a live pull from a residential IP on 2026-10-24
+  (4,577 rows, same 17 columns), written ZSTD with `snapshot_at`
+  `2026-10-24T23:37:36Z`. It shrank from 437 KiB to 268 KiB. As before, refresh it by
+  running the build locally from an IP the API allows, then commit `data/`.
+- **Checked:** with all 21 listed sources simulated dead, the warehouse built from
+  snapshots, `dbt build` passed (PASS=163, ERROR=0), and `tiresias check` passed. 21
+  of 22 `mart_build_metadata` rows were flagged `from_snapshot`; `neighborhoods` was
+  the one live row.
