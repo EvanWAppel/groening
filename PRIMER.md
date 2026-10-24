@@ -9,50 +9,36 @@
 `build_warehouse.py` → DuckDB `raw.*` → dbt staging/marts → Streamlit pages, baked at Docker
 build time and deployed on Railway at https://groening.evanappel.me.
 
-**Current state (main @ 7c88625).** v1 done (18 topic pages + Overview, Sources &
-Methodology, Service Requests, Transit, Housing, Ask Tiresias). Phase 2: E1–E4, E7a, E7b,
-E7d, E8 done; E5 deferred; E7c dropped; E6 decided (scaffold + guide) but unbuilt; E9 gated
-on the key guardrail. `project.toml` verified (PLAT-REG-01, PR #19). No open PRs; no unmerged
-local branches. No git-crypt paths.
+**Current state (main @ eb13ccd, 2026-10-23).** v1 done (18 topic pages + Overview, Sources &
+Methodology, Service Requests, Transit, Housing, Ask Tiresias). Phase 2: E1–E4, E6, E7a, E7b,
+E7d, E8 done; E5 deferred; E7c dropped; E9 still open in TASKS.md. The weekend run merged as
+PR #20 (all four tasks below). Since then: PR #22 bumped tiresias to v0.1.1 and did the
+E7b follow-ups (Portland wall-clock dates, raise on unmapped graffiti status); PR #23 repointed
+the UGB source to the Metro RLIS layer after the old layer was retired and broke builds;
+PR #24 counts a blank graffiti status as "Not recorded"; PR #21 synced the blocker protocol.
+`project.toml` verified (PLAT-REG-01, PR #19). No open PRs (2026-10-23). No git-crypt paths.
 
-**Baseline (2026-10-22, on main).** `uv run python -m pytest -q` → 115 passed, 2 skipped,
-**2 failed under machine load** (both pass when re-run alone — timing flakes):
-`test_helpers.py::TestInspectionsSnapshotFallback::test_first_failure_cancels_remaining_windows`
-(thread race on `calls < n_windows`) and
-`test_tiresias_config.py::test_ask_page_without_a_key_shows_a_notice` (AppTest 30 s timeout).
-`uv run ruff check .` and `uv run ty check` clean.
+**Baseline (2026-10-23, on main).** `uv run python -m pytest -q` → **173 passed, 2 skipped**
+(the two skips need dbt artifacts). `uv run ruff check .` and `uv run ty check` clean. The two
+timing flakes noted on 2026-10-22 were fixed by FLAKE-01 (PR #20).
 
 **Check command (every task):** `uv run python -m pytest -q && uv run ruff check . && uv run ty check`
 
-### Autonomous tasks, in order
+### Autonomous tasks
 
-Work on branch `weekend-2026-10-24` (or a per-task branch off it). One PR per task; **open
-PRs, never merge, never deploy.**
+**All four tasks from the 2026-10-24 weekend list are done (PR #20):**
 
-1. **FLAKE-01 — De-flake the two timing-sensitive tests** (no TASKS id; found 2026-10-22).
-   Make `test_first_failure_cancels_remaining_windows` deterministic (e.g. assert on the
-   cancellation mechanism, or gate the fake POST so the race can't let every window through)
-   and give the Ask-page AppTest a timeout that survives a loaded machine — without weakening
-   what each test proves. *Done:* full suite green 3× in a row, incl. once while another
-   heavy process runs.
-2. **E6 — `make new-city` scaffold + "target a new metro" guide** (TASKS E6, decided
-   2026-09-27: scaffold + guide, NOT a pip package). Scope it to this repo: a script/Make
-   target that stamps a fresh project skeleton with a stub `city_config.py` (the one
-   per-city surface), plus `docs/new-city.md`. TDD the generator (pytest: run it into
-   `tmp_path`, assert files + that the stub imports). Do not touch Elvis/Robbins. Log any
-   trade-off in `DECISIONS.md` as a *draft* entry for Evan to confirm. *Done:* tests green,
-   guide written, TASKS E6 ticked with a note.
-3. **TASKS hygiene** — TOPIC-311 still reads "HELD for Evan" though E7b resolved it; DEPLOY-04
-   mentions "fail-fast on the first 403 would cut that" — confirm in `build_warehouse.py`
-   (it now cancels after the first failure) and update the note. Docs only. *Done:* TASKS.md
-   matches the code.
-4. **E7a follow-up — transit service frequency (optional, only if 1–3 are done).** TASKS E7a
-   notes trips.txt was skipped "for later". TDD a `_parse_gtfs` extension for trips (+
-   stop_times only if needed), a `mart_transit_route_frequency`, and a chart on
-   `views/transit.py`; add a `SOURCES`/exposure update if a new raw table lands (a regression
-   test enforces every raw table is catalogued). The agent does not eyeball raw rows — assert
-   on shapes/counts in tests. *Done:* pytest/ruff/ty clean; `dbt build --profiles-dir .`
-   green if a local warehouse build is feasible (a full build fetches live sources, ~10 min).
+1. ~~**FLAKE-01** — de-flake the inspections cancel race and Ask-page AppTest~~ (`48692fc`).
+2. ~~**E6** — `make new-city` scaffold + `docs/new-city.md`~~ (`505aa80`; draft DECISIONS entry
+   awaits Evan).
+3. ~~**TASKS hygiene** — TOPIC-311 / DEPLOY-04 notes~~ (`0ee287c`).
+4. ~~**E7a follow-up** — `mart_transit_route_frequency` + "Busiest routes" chart on
+   `views/transit.py`~~ (`d79b1e2`, plus `f0c6006` classifying the mart in `tiresias.yml`).
+
+**Nothing autonomous is queued.** The open items are Evan's, in `BLOCKED.md`: review the
+Tiresias gold set / column-doc claims, and decide whether a single dead optional source should
+fail the whole deploy (options a/b/c there; don't build any of them before he picks). E9 is the
+only open TASKS item; see "Do NOT".
 
 ### House rules that matter (from CLAUDE.md)
 
@@ -69,12 +55,14 @@ PRs, never merge, never deploy.**
 
 - **No deploys, no merges** (merge to main = Railway deploy). No Railway/Cloudflare changes;
   closing the Railway origin URL is a `_system` task.
-- **E9 (text-to-SQL) and anything needing an Anthropic key** — blocked on the dedicated,
-  spend-capped key (BLOCKED.md). Do not run the live Tiresias gold eval.
-- **E7b-followups (1) timezone and (2) graffiti CASE** — change data semantics; waiting on
-  Evan's call (BLOCKED.md).
+- **E9 (text-to-SQL) and anything needing an Anthropic key.** BLOCKED.md records (2026-10-23)
+  that a dedicated `groening` workspace key with a spend cap and alert is set on Railway, but
+  TASKS.md E9 still reads "gated" and asks for the key checklist first, so ask Evan before
+  starting it. Do not run the live Tiresias gold eval.
+- **Optional-source handling** (fatal vs. optional vs. snapshot fallback) — waiting on Evan's
+  call in BLOCKED.md.
 - **E5 cross-city comparison** (deferred) and **E8 deploy wiring** (needs deploy).
-- Reviewing the Tiresias gold set / column-doc claims and the license strings — Evan's review.
+- Reviewing the Tiresias gold set / column-doc claims — Evan's review (license strings were confirmed 2026-10-23).
 - No browser automation; verify with tests/curl/logs. Never read `.env`.
 
 ---
