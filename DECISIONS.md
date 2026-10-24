@@ -228,3 +228,28 @@ fails `dbt build` (and so the deploy) until a bucket is added; that is the point
 since a growing catch-all hides data drift. The `%referred%`-before-`open%` order was
 left as is; it was not part of this call.
 
+---
+
+## 2026-10-24 — A dead source falls back to its last good snapshot in `data/` (option c; confirmed by Evan 2026-10-24, topic list pending)
+
+Evan's call on the BLOCKED.md question "should a single dead optional source fail the
+whole deploy?", raised after Metro retired the old UGB layer around 2026-10-18 and
+every Railway build failed (`ValueError: ugb: no feature returned`) until the URL was
+repointed to RLIS.
+
+**Chose (c):** for a named set of topics, when the live fetch fails or returns zero
+rows, the build loads that topic's last good snapshot committed under `data/` and logs a
+warning, the same pattern `restaurant_inspections` already uses
+(`data/restaurant_inspections_raw.parquet`, `_load_inspections_snapshot`). The deploy
+goes ahead, and the dbt models and pages see a real `raw.<topic>` table, just an older
+one. **Rejected:** (a) keep every source fatal, which lets one publisher's outage block
+all deploys, security fixes included; (b) mark topics optional and drop them with a
+`DROPPED topic …` warning, which would make every `stg_*`/`mart_*` model and page handle
+a missing table. **Trade-off:** a topic on fallback serves stale data with no error, which
+pulls against CLAUDE.md's "a fetch that returns zero rows should raise" / "do not hide
+errors". To keep that visible, the fallback must log loudly and should be surfaced in
+build provenance or on the page. Each fallback topic also needs a committed snapshot that
+gets refreshed after successful live pulls. Topics not on the list stay fatal.
+
+**Open:** which topics get the fallback. Evan hasn't picked them yet (tracked in
+`BLOCKED.md`). No code until he does.
