@@ -543,7 +543,7 @@ DROPPED_TOPICS = {
 # logs a WARNING and the topic's page shows a "data as of <snapshot date>" notice.
 # Every topic not listed here stays fatal. `neighborhoods` is deliberately absent:
 # every point topic is tagged against it, so it must be live. restaurant_inspections
-# has its own older fallback (fetch_inspections) and is not listed either.
+# is on its snapshot on every Railway build (the API 403s datacenter IPs).
 SNAPSHOT_FALLBACK_TOPICS = frozenset(
     {
         "ugb",
@@ -562,6 +562,7 @@ SNAPSHOT_FALLBACK_TOPICS = frozenset(
         "air_quality",
         "marriage",
         "tourism",
+        "restaurant_inspections",
         "transit_routes",
         "transit_stops",
         "transit_trips",

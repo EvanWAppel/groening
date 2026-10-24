@@ -17,9 +17,7 @@ from build_warehouse import (
     _centroid,
     _collect_window,
     _epoch_to_date,
-    _fetch_inspections_live,
     _inspection_windows,
-    _load_inspections_snapshot,
     _months_ago,
     _paginate,
     _parse_gtfs,
@@ -304,31 +302,29 @@ class TestCollectBuildMetadata:
         assert int(df["row_count"].sum()) == 26051
 
 
-class TestInspectionsSnapshotFallback:
-    """The MyHealthDepartment API 403s datacenter IPs, so a blocked live pull
-    must fall back to the committed snapshot instead of failing the build."""
+class TestInspectionsLiveFetch:
+    """The MyHealthDepartment API 403s datacenter IPs, so on Railway the live pull
+    always fails. Since 2026-10-24 the shared last-good-snapshot fallback
+    (fetch_or_snapshot, tests/test_snapshot_fallback.py) catches that; the fetcher
+    itself just raises, like every other topic's."""
 
-    def test_snapshot_loads_nonempty_with_key_columns(self):
-        df = _load_inspections_snapshot()
-        assert not df.empty
-        assert "inspectionID" in df.columns
-
-    def test_falls_back_to_snapshot_when_live_blocked(self, monkeypatch):
-        def blocked():
+    def test_blocked_live_pull_raises_for_the_shared_fallback(self, monkeypatch):
+        def blocked(body):
             raise RuntimeError("inspections POST failed after 4 attempts")
 
-        monkeypatch.setattr(build_warehouse, "_fetch_inspections_live", blocked)
-        df = fetch_inspections()
-        assert not df.empty
-        assert "inspectionID" in df.columns
+        monkeypatch.setattr(build_warehouse, "_post_inspections", blocked)
+        with pytest.raises(RuntimeError, match="after 4 attempts"):
+            fetch_inspections()
 
-    def test_live_success_is_returned_without_fallback(self, monkeypatch):
-        sentinel = pd.DataFrame([{"inspectionID": "live-1"}])
-        monkeypatch.setattr(build_warehouse, "_fetch_inspections_live", lambda: sentinel)
-        # Don't touch the committed snapshot file during the test.
-        monkeypatch.setattr(build_warehouse, "_dump_inspections_snapshot", lambda df: None)
-        df = fetch_inspections()
-        assert df["inspectionID"].tolist() == ["live-1"]
+    def test_one_off_snapshot_helpers_are_gone(self):
+        """One fallback mechanism, not two: the older inspections-only one is retired."""
+        for name in (
+            "INSPECTIONS_SNAPSHOT",
+            "_load_inspections_snapshot",
+            "_dump_inspections_snapshot",
+            "_fetch_inspections_live",
+        ):
+            assert not hasattr(build_warehouse, name), name
 
     def test_first_failure_cancels_remaining_windows(self, monkeypatch):
         """A blocked API fails every window the same way; the live pull must bail
@@ -368,7 +364,7 @@ class TestInspectionsSnapshotFallback:
         assert n_windows > 20  # enough windows that fanning through all would be slow
 
         with pytest.raises(RuntimeError):
-            _fetch_inspections_live()
+            fetch_inspections()
 
         # Only windows already running when the first failure landed reach the
         # API: the failed one, plus at most one in flight per pool worker.

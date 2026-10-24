@@ -47,7 +47,7 @@ class TestFallbackTopicList:
             "ugb", "building_permits", "parks", "housing", "historic", "trees",
             "heritage_trees", "bike_network", "crime", "service_requests",
             "short_term_rentals", "weather", "willamette", "air_quality",
-            "marriage", "tourism", *TRANSIT,
+            "marriage", "tourism", "restaurant_inspections", *TRANSIT,
         }
 
     def test_neighborhoods_stays_fatal(self):
@@ -55,6 +55,30 @@ class TestFallbackTopicList:
 
     def test_every_listed_topic_is_a_catalogued_source(self):
         assert cfg.SNAPSHOT_FALLBACK_TOPICS <= set(cfg.SOURCES)
+
+    def test_restaurant_inspections_uses_the_shared_fallback(self):
+        """Folded in from its older one-off fallback, so it gets the same loud
+        warning, provenance stamp and page notice as every other topic."""
+        assert "restaurant_inspections" in cfg.SNAPSHOT_FALLBACK_TOPICS
+
+
+class TestCommittedSnapshots:
+    """The seed snapshots in data/ that a real build falls back to."""
+
+    @pytest.mark.parametrize("table", sorted(cfg.SNAPSHOT_FALLBACK_TOPICS))
+    def test_every_listed_topic_has_a_dated_committed_snapshot(self, table):
+        path = snapshot_path(table)
+        assert path.exists(), f"no committed snapshot at {path}"
+        taken = dict(
+            duckdb.connect()
+            .execute(
+                "select key::varchar, value::varchar from parquet_kv_metadata(?)",
+                [str(path)],
+            )
+            .fetchall()
+        ).get("snapshot_at")
+        assert taken, f"{path} has no snapshot_at date, so its page notice would say 'unknown'"
+        datetime.datetime.fromisoformat(taken)
 
 
 class TestSnapshotStore:
@@ -227,13 +251,12 @@ class TestMainWiring:
             "fetch_neighborhoods",
             lambda: pd.DataFrame([{"name": "Testville", "boundary_json": json.dumps(hood)}]),
         )
-        monkeypatch.setattr(build_warehouse, "fetch_inspections", lambda: _frame("insp"))
         names = [
             "fetch_building_permits", "fetch_parks", "fetch_housing", "fetch_historic",
             "fetch_weather", "fetch_willamette", "fetch_str", "fetch_crime",
             "fetch_service_requests", "fetch_air_quality", "fetch_trees",
             "fetch_heritage_trees", "fetch_bike_network", "fetch_transit", "fetch_ugb",
-            "fetch_marriage", "fetch_tourism",
+            "fetch_marriage", "fetch_tourism", "fetch_inspections",
         ]
         for name in names:
             monkeypatch.setattr(build_warehouse, name, _dead(urllib.error.URLError(f"{name} down")))
@@ -250,8 +273,17 @@ class TestMainWiring:
         stale = {t for t, d in meta.items() if d is not None}
         assert stale == set(cfg.SNAPSHOT_FALLBACK_TOPICS)
         assert meta["neighborhoods"] is None
-        assert meta["restaurant_inspections"] is None
         assert con.execute("select tag from raw.ugb limit 1").fetchone() == ("old-ugb",)
+        assert con.execute("select tag from raw.restaurant_inspections limit 1").fetchone() == (
+            "old-restaurant_inspections",
+        )
+
+    def test_a_dead_inspections_source_without_a_snapshot_fails_the_build(self, offline_build):
+        """Its old fallback raised when the snapshot was missing; that still holds."""
+        for t in cfg.SNAPSHOT_FALLBACK_TOPICS - {"restaurant_inspections"}:
+            write_snapshot(t, _frame(f"old-{t}"), AT)
+        with pytest.raises(urllib.error.URLError, match="fetch_inspections down"):
+            build_warehouse.main()
 
     def test_a_dead_source_without_a_snapshot_still_fails_the_build(self, offline_build):
         for t in cfg.SNAPSHOT_FALLBACK_TOPICS - {"marriage"}:
