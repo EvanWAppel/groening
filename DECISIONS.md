@@ -308,14 +308,16 @@ gets refreshed after successful live pulls. Topics not on the list stay fatal.
 
 ---
 
-## 2026-10-24 — `restaurant_inspections` joins the shared snapshot fallback (agent-drafted, for Evan to confirm)
+## 2026-10-24 — `restaurant_inspections` joins the shared snapshot fallback (confirmed by Evan 2026-10-24)
 
 Follow-up to the entry above (TASKS ETL-05). **Chose:** add `restaurant_inspections`
 to `city_config.SNAPSHOT_FALLBACK_TOPICS`, route it through `fetch_or_snapshot` in
 `main()`, and delete its one-off fallback (`INSPECTIONS_SNAPSHOT`,
 `_load_inspections_snapshot`, `_dump_inspections_snapshot`, and the
 `fetch_inspections` wrapper; the live fetcher `_fetch_inspections_live` is now
-`fetch_inspections`, like every other topic's fetcher). **Rejected:** keeping two
+`fetch_inspections`, like every other topic's fetcher). Evan approved both
+behaviour changes below on 2026-10-24: the permanent stale banner in production and
+catching any exception. **Rejected:** keeping two
 fallback mechanisms side by side, which left inspections without the provenance stamp,
 the `STALE topic` log line and the page notice. **Trade-offs:**
 
