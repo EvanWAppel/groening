@@ -39,6 +39,7 @@ spend_cap = "yes"           # $10/month workspace cap + $5 email alert (Console,
 done = ["PLAT-REG-01"]
 
 [commands]
+setup = "uv sync"
 dev = "uv run streamlit run streamlit_app.py"
 test = "uv run pytest"
 lint = "uv run ruff check . && uv run ty check"
@@ -47,3 +48,10 @@ lint = "uv run ruff check . && uv run ty check"
 description = "Portland open-data explorer (Streamlit + DuckDB + dbt)"
 language = "python"
 tags = ["portfolio"]
+
+[fleet]                     # joined 2026-10-31 (_system D-051); also has the `fleet` topic
+component = "groening"
+agents = ["claude", "codex"]
+default_model = "sonnet"
+default_branch = "main"
+max_minutes = 45
