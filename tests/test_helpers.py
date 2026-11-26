@@ -8,6 +8,7 @@ import math
 import threading
 import zipfile
 
+import duckdb
 import pandas as pd
 import pytest
 
@@ -22,6 +23,7 @@ from build_warehouse import (
     _paginate,
     _parse_gtfs,
     _parse_usgs_dv,
+    _raw_row_counts,
     _search_body,
     _split_window,
     _webmerc_to_wgs84,
@@ -300,6 +302,17 @@ class TestCollectBuildMetadata:
         # The mart aggregates exactly these into the "N sources · M rows" banner.
         assert len(df) == 3
         assert int(df["row_count"].sum()) == 26051
+
+
+class TestRawRowCounts:
+    def test_previous_builds_metadata_is_not_counted_as_a_source(self):
+        # Rebuilding over an existing portland.duckdb leaves the last build's
+        # raw.build_metadata in place; counting it broke the Sources page (EA-213).
+        con = duckdb.connect()
+        con.execute("create schema raw")
+        con.execute("create table raw.parks as select 1 as id")
+        con.execute("create table raw.build_metadata as select 'parks' as table_name")
+        assert _raw_row_counts(con) == {"parks": 1}
 
 
 class TestInspectionsLiveFetch:

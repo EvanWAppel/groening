@@ -36,7 +36,7 @@ isolated = "yes"            # dedicated `groening` Anthropic workspace key, on R
 spend_cap = "yes"           # $10/month workspace cap + $5 email alert (Console, 2026-10-23)
 
 [platform]
-done = ["PLAT-REG-01"]
+done = ["PLAT-REG-01", "PLAT-DEMO-04"]
 
 [commands]
 setup = "uv sync"

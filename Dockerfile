@@ -23,6 +23,10 @@ RUN dbt docs generate --profiles-dir .
 # renamed column, bad map-only column). Warnings don't fail it.
 RUN tiresias check
 
+# Fail the build if any page raises or shows st.error against the warehouse just
+# built (EA-213). GitHub CI can't run this: it never builds the warehouse.
+RUN pip install --no-cache-dir "pytest>=9.1.1" && python -m pytest -q -p no:cacheprovider tests/test_page_smoke.py
+
 # Railway injects $PORT at runtime; default to 8501 for local runs. Exec form
 # (via sh -c so $PORT still expands) so Streamlit receives SIGTERM directly.
 EXPOSE 8501
