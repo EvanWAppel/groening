@@ -531,11 +531,12 @@ def _raw_row_counts(con: duckdb.DuckDBPyConnection) -> dict[str, int]:
 
     Read straight from the warehouse after all topic fetches land, so the counts
     are exactly what dbt will model — no threading totals through each fetch call.
-    Run before ``raw.build_metadata`` is written so it doesn't count itself.
+    ``raw.build_metadata`` is excluded: a rebuild over an existing warehouse still
+    holds the previous build's copy, and it isn't a source.
     """
     tables = con.execute(
         "select table_name from information_schema.tables where table_schema = 'raw' "
-        "order by table_name"
+        "and table_name != 'build_metadata' order by table_name"
     ).fetchall()
     counts: dict[str, int] = {}
     for (name,) in tables:
